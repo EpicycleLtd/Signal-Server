@@ -70,16 +70,16 @@ public class DirectoryUpdater {
         else                                        offset += accounts.size();
 
         for (Account account : accounts) {
-          if (account.isActive()) {
+//          if (account.isActive()) {
             byte[]        token         = Util.getContactToken(account.getNumber());
             ClientContact clientContact = new ClientContact(token, null, account.isVoiceSupported());
 
             directory.add(batchOperation, clientContact);
             contactsAdded++;
-          } else {
-            directory.remove(batchOperation, account.getNumber());
-            contactsRemoved++;
-          }
+//          } else {
+//            directory.remove(batchOperation, account.getNumber());
+//            contactsRemoved++;
+//          }
         }
 
         logger.info("Processed " + CHUNK_SIZE + " local accounts...");

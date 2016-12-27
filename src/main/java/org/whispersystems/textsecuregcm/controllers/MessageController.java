@@ -104,7 +104,6 @@ public class MessageController {
 
     try {
       boolean isSyncMessage = source.getNumber().equals(destinationName);
-
       if (Util.isEmpty(messages.getRelay())) sendLocalMessage(source, destinationName, messages, isSyncMessage);
       else                                   sendRelayMessage(source, destinationName, messages, isSyncMessage);
 
@@ -146,7 +145,16 @@ public class MessageController {
     try {
       Optional<OutgoingMessageEntity> message = messagesManager.delete(account.getNumber(), source, timestamp);
 
-      if (message.isPresent() && message.get().getType() != Envelope.Type.RECEIPT_VALUE) {
+      //if (message.isPresent() && message.get().getType() != Envelope.Type.RECEIPT_VALUE) {
+      if (message.isPresent() && (
+              message.get().getType() != Envelope.Type.RECEIPT_VALUE &&
+              message.get().getType() != Envelope.Type.READ_VALUE
+          )
+      ){
+
+        //Log by Imre
+        logger.info("event=delivery_receipt_remove_pending from=" + source + " messageid=" + timestamp);
+
         receiptSender.sendReceipt(account,
                                   message.get().getSource(),
                                   message.get().getTimestamp(),
@@ -179,6 +187,9 @@ public class MessageController {
 
       if (destinationDevice.isPresent()) {
         sendLocalMessage(source, destination, destinationDevice.get(), messages.getTimestamp(), incomingMessage);
+        //Log by Imre
+        logger.info("event=message_sent from=" + source.getNumber() + " to=" + destinationName + " messageid=" + messages.getTimestamp());
+
       }
     }
   }

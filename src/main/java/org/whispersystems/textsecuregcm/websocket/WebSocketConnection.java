@@ -102,10 +102,11 @@ public class WebSocketConnection implements DispatchChannel {
         @Override
         public void onSuccess(@Nullable WebSocketResponseMessage response) {
           boolean isReceipt = message.getType() == Envelope.Type.RECEIPT;
+          boolean isRead    = message.getType() == Envelope.Type.READ;
 
           if (isSuccessResponse(response)) {
             if (storedMessageId.isPresent()) messagesManager.delete(account.getNumber(), storedMessageId.get());
-            if (!isReceipt)                  sendDeliveryReceiptFor(message);
+            if (!isReceipt && !isRead)       sendDeliveryReceiptFor(message);
             if (requery)                     processStoredMessages();
           } else if (!isSuccessResponse(response) && !storedMessageId.isPresent()) {
             requeueMessage(message);

@@ -16,12 +16,14 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 
 import io.dropwizard.auth.Auth;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Path("/v1/receipt")
 public class ReceiptController {
 
   private final ReceiptSender receiptSender;
-
+  private final Logger logger = LoggerFactory.getLogger(ReceiptController.class);
   public ReceiptController(ReceiptSender receiptSender) {
     this.receiptSender = receiptSender;
   }
@@ -37,6 +39,8 @@ public class ReceiptController {
   {
     try {
       receiptSender.sendReceipt(source, destination, messageId, relay);
+      //Log by Imre
+      logger.info("event=delivered_sent from=" + source.getNumber() + " to=" + destination + " messageid=" + messageId);
     } catch (NoSuchUserException | NotPushRegisteredException e) {
       throw new WebApplicationException(Response.Status.NOT_FOUND);
     } catch (TransientPushFailureException e) {

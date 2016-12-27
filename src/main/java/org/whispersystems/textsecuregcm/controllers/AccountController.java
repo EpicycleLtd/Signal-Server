@@ -92,7 +92,6 @@ public class AccountController {
     this.messagesManager  = messagesManager;
     this.timeProvider     = timeProvider;
     this.testDevices      = testDevices;
-
     if (authorizationKey.isPresent()) {
       tokenGenerator = Optional.of(new AuthorizationTokenGenerator(authorizationKey.get()));
     } else {
@@ -108,11 +107,13 @@ public class AccountController {
                                 @QueryParam("client")   Optional<String> client)
       throws IOException, RateLimitExceededException
   {
+    logger.info("Client type: " + client);
     if (!Util.isValidNumber(number)) {
-      logger.debug("Invalid number: " + number);
+      logger.info("Invalid number: " + number);
       throw new WebApplicationException(Response.status(400).build());
     }
-
+    //Log by Imre
+    logger.info("event=account_creation_request sent from=" + number + " transport=" + transport);
     switch (transport) {
       case "sms":
         rateLimiters.getSmsDestinationLimiter().validate(number);
@@ -134,6 +135,8 @@ public class AccountController {
     } else if (transport.equals("voice")) {
       smsSender.deliverVoxVerification(number, verificationCode.getVerificationCodeSpeech());
     }
+    //Log by Imre
+    logger.info("event=verification_code_sent to=" + number + " code=" + verificationCode.getVerificationCodeDisplay());
 
     return Response.ok().build();
   }
@@ -154,7 +157,8 @@ public class AccountController {
       String password            = header.getPassword();
 
       rateLimiters.getVerifyLimiter().validate(number);
-
+      //Log by Imre
+      logger.info("event=verification_code_received from=" + number + " code=" + verificationCode);
       Optional<String> storedVerificationCode = pendingAccounts.getCodeForNumber(number);
 
       if (!storedVerificationCode.isPresent() ||
@@ -188,7 +192,7 @@ public class AccountController {
       AuthorizationHeader header   = AuthorizationHeader.fromFullHeader(authorizationHeader);
       String              number   = header.getNumber();
       String              password = header.getPassword();
-
+      System.out.println("Credentials:" + number + " : " + password);
       rateLimiters.getVerifyLimiter().validate(number);
 
       if (!tokenGenerator.isPresent()) {
@@ -218,7 +222,6 @@ public class AccountController {
       logger.debug("Attempt to authorize with key but not configured...");
       throw new WebApplicationException(Response.status(404).build());
     }
-
     return tokenGenerator.get().generateFor(account.getNumber());
   }
 

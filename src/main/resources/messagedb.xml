@@ -40,9 +40,8 @@
                 <constraints nullable="false"/>
             </column>
 
-            <column name="message" type="bytea">
-                <constraints nullable="false"/>
-            </column>
+            <column name="message" type="bytea"/>
+            <column name="content" type="bytea"/>
         </createTable>
 
         <createIndex tableName="messages" indexName="destination_index">
@@ -55,18 +54,7 @@
             <column name="destination_device"></column>
             <column name="type"></column>
         </createIndex>
-    </changeSet>
 
-    <changeSet id="2" author="moxie">
-        <addColumn tableName="messages">
-            <column name="content" type="bytea"/>
-        </addColumn>
-
-        <dropNotNullConstraint tableName="messages" columnName="message"/>
-    </changeSet>
-
-    <changeSet id="3" author="moxie">
-        <sql>CREATE RULE bounded_message_queue AS ON INSERT TO messages DO ALSO DELETE FROM messages WHERE id IN (SELECT id FROM messages WHERE destination = NEW.destination AND destination_device = NEW.destination_device ORDER BY timestamp DESC OFFSET 5000);</sql>
     </changeSet>
 
 </databaseChangeLog>

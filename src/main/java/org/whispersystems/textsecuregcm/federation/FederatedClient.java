@@ -73,6 +73,7 @@ public class FederatedClient {
   private static final String PREKEY_PATH_DEVICE_V2 = "/v2/federation/key/%s/%s";
   private static final String ATTACHMENT_URI_PATH   = "/v1/federation/attachment/%d";
   private static final String RECEIPT_PATH          = "/v1/receipt/%s/%d/%s/%d";
+  private static final String READ_PATH             = "/v1/read/%s/%d/%s/%d";
 
   private final FederatedPeer peer;
   private final Client        client;
@@ -198,6 +199,30 @@ public class FederatedClient {
     try {
       response = client.target(peer.getUrl())
                        .path(String.format(RECEIPT_PATH, source, sourceDeviceId, destination, messageId))
+                       .request()
+                       .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
+                       .put(Entity.entity("", MediaType.APPLICATION_JSON_TYPE));
+
+      if (response.getStatus() != 200 && response.getStatus() != 204) {
+        if (response.getStatus() == 411) throw new WebApplicationException(Response.status(413).build());
+        else                             throw new WebApplicationException(Response.status(response.getStatusInfo()).build());
+      }
+    } catch (ProcessingException e) {
+      logger.warn("sendMessage", e);
+      throw new IOException(e);
+    } finally {
+      if (response != null) response.close();
+    }
+  }
+
+  public void sendDeliveryRead(String source, long sourceDeviceId, String destination, long messageId)
+      throws IOException
+  {
+    Response response = null;
+
+    try {
+      response = client.target(peer.getUrl())
+                       .path(String.format(READ_PATH, source, sourceDeviceId, destination, messageId))
                        .request()
                        .property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true)
                        .put(Entity.entity("", MediaType.APPLICATION_JSON_TYPE));
