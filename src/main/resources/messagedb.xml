@@ -24,6 +24,7 @@
                 <constraints nullable="false"/>
             </column>
 
+
             <column name="source" type="text">
                 <constraints nullable="false"/>
             </column>
@@ -55,6 +56,13 @@
             <column name="type"></column>
         </createIndex>
 
+    </changeSet>
+    <changeSet id="2" author="Imre">
+        <addColumn tableName="messages">
+            <column name="delivery_timestamp" type="bigint">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
     </changeSet>
 
 </databaseChangeLog>

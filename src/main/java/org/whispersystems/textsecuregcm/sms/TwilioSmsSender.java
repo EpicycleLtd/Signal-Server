@@ -74,7 +74,7 @@ public class TwilioSmsSender {
     messageParams.add(new BasicNameValuePair("From", getRandom(random, numbers)));
     
     if ("ios".equals(clientType.orNull())) {
-      messageParams.add(new BasicNameValuePair("Body", String.format(SmsSender.SMS_IOS_VERIFICATION_TEXT, verificationCode)));
+      messageParams.add(new BasicNameValuePair("Body", String.format(SmsSender.SMS_IOS_VERIFICATION_TEXT, verificationCode, verificationCode)));
     } else {
       messageParams.add(new BasicNameValuePair("Body", String.format(SmsSender.SMS_VERIFICATION_TEXT, verificationCode)));
     }

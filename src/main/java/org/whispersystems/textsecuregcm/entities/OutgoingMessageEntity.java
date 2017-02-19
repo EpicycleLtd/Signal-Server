@@ -18,6 +18,9 @@ public class OutgoingMessageEntity {
   private long timestamp;
 
   @JsonProperty
+  private long deliveryTimestamp;
+
+  @JsonProperty
   private String source;
 
   @JsonProperty
@@ -32,6 +35,7 @@ public class OutgoingMessageEntity {
   public OutgoingMessageEntity() {}
 
   public OutgoingMessageEntity(long id, int type, String relay, long timestamp,
+                               long deliveryTimestamp,
                                String source, int sourceDevice, byte[] message,
                                byte[] content)
   {
@@ -39,6 +43,22 @@ public class OutgoingMessageEntity {
     this.type         = type;
     this.relay        = relay;
     this.timestamp    = timestamp;
+    this.deliveryTimestamp = deliveryTimestamp;
+    this.source       = source;
+    this.sourceDevice = sourceDevice;
+    this.message      = message;
+    this.content      = content;
+  }
+
+  public OutgoingMessageEntity(long id, int type, String relay, long timestamp,
+                               String source, int sourceDevice, byte[] message,
+                               byte[] content)
+  {
+    this.id           = id;
+    this.type         = type;
+    this.relay        = relay;
+    this.timestamp    = timestamp;
+    this.deliveryTimestamp = 0;
     this.source       = source;
     this.sourceDevice = sourceDevice;
     this.message      = message;
@@ -55,6 +75,10 @@ public class OutgoingMessageEntity {
 
   public long getTimestamp() {
     return timestamp;
+  }
+
+  public long getDeliveryTimestamp() {
+    return deliveryTimestamp;
   }
 
   public String getSource() {

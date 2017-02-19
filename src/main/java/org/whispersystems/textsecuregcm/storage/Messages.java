@@ -30,6 +30,7 @@ public abstract class Messages {
   private static final String TYPE               = "type";
   private static final String RELAY              = "relay";
   private static final String TIMESTAMP          = "timestamp";
+  private static final String DELIVERY_TIMESTAMP = "delivery_timestamp";
   private static final String SOURCE             = "source";
   private static final String SOURCE_DEVICE      = "source_device";
   private static final String DESTINATION        = "destination";
@@ -37,8 +38,8 @@ public abstract class Messages {
   private static final String MESSAGE            = "message";
   private static final String CONTENT            = "content";
 
-  @SqlQuery("INSERT INTO messages (" + TYPE + ", " + RELAY + ", " + TIMESTAMP + ", " + SOURCE + ", " + SOURCE_DEVICE + ", " + DESTINATION + ", " + DESTINATION_DEVICE + ", " + MESSAGE + ", " + CONTENT + ") " +
-            "VALUES (:type, :relay, :timestamp, :source, :source_device, :destination, :destination_device, :message, :content) " +
+  @SqlQuery("INSERT INTO messages (" + TYPE + ", " + RELAY + ", " + TIMESTAMP + ", " + DELIVERY_TIMESTAMP + ", " + SOURCE + ", " + SOURCE_DEVICE + ", " + DESTINATION + ", " + DESTINATION_DEVICE + ", " + MESSAGE + ", " + CONTENT + ") " +
+            "VALUES (:type, :relay, :timestamp, :delivery_timestamp, :source, :source_device, :destination, :destination_device, :message, :content) " +
             "RETURNING (SELECT COUNT(id) FROM messages WHERE " + DESTINATION + " = :destination AND " + DESTINATION_DEVICE + " = :destination_device AND " + TYPE + " != " + Envelope.Type.RECEIPT_VALUE + ")")
   abstract int store(@MessageBinder Envelope message,
                      @Bind("destination") String destination,
@@ -87,6 +88,7 @@ public abstract class Messages {
                                        type,
                                        resultSet.getString(RELAY),
                                        resultSet.getLong(TIMESTAMP),
+                                       resultSet.getLong(DELIVERY_TIMESTAMP),
                                        resultSet.getString(SOURCE),
                                        resultSet.getInt(SOURCE_DEVICE),
                                        legacyMessage,
@@ -114,6 +116,7 @@ public abstract class Messages {
             sql.bind(SOURCE_DEVICE, message.getSourceDevice());
             sql.bind(MESSAGE, message.hasLegacyMessage() ? message.getLegacyMessage().toByteArray() : null);
             sql.bind(CONTENT, message.hasContent() ? message.getContent().toByteArray() : null);
+            sql.bind(DELIVERY_TIMESTAMP, message.hasDeliveryTimestamp() ? message.getDeliveryTimestamp() : null);
           }
         };
       }
