@@ -68,7 +68,7 @@ public class AttachmentController {
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   public AttachmentDescriptor allocateAttachment(@Auth Account account)
-      throws RateLimitExceededException
+      throws RateLimitExceededException, Exception
   {
     if (account.isRateLimited()) {
       rateLimiters.getAttachmentLimiter().validate(account.getNumber());
@@ -88,7 +88,7 @@ public class AttachmentController {
   public AttachmentUri redirectToAttachment(@Auth                      Account account,
                                             @PathParam("attachmentId") long    attachmentId,
                                             @QueryParam("relay")       Optional<String> relay)
-      throws IOException
+      throws IOException, Exception
   {
     try {
       if (!relay.isPresent()) {
