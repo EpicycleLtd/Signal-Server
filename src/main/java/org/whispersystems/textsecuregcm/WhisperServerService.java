@@ -77,6 +77,8 @@ import org.whispersystems.textsecuregcm.storage.DirectoryManager;
 import org.whispersystems.textsecuregcm.storage.Keys;
 import org.whispersystems.textsecuregcm.storage.Messages;
 import org.whispersystems.textsecuregcm.storage.MessagesManager;
+import org.whispersystems.textsecuregcm.storage.Whitelist;
+import org.whispersystems.textsecuregcm.storage.WhitelistManager;
 import org.whispersystems.textsecuregcm.storage.PendingAccounts;
 import org.whispersystems.textsecuregcm.storage.PendingAccountsManager;
 import org.whispersystems.textsecuregcm.storage.PendingDevices;
@@ -136,6 +138,12 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
         return configuration.getMessageStoreConfiguration();
       }
     });
+    bootstrap.addBundle(new NameableMigrationsBundle<WhisperServerConfiguration>("whitelistdb", "whitelistdb.xml") {
+      @Override
+      public DataSourceFactory getDataSourceFactory(WhisperServerConfiguration configuration) {
+        return configuration.getWhitelistStoreConfiguration();
+      }
+    });
   }
 
   @Override
@@ -152,15 +160,17 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
     environment.getObjectMapper().setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE);
     environment.getObjectMapper().setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
 
-    DBIFactory dbiFactory = new DBIFactory();
-    DBI        database   = dbiFactory.build(environment, config.getDataSourceFactory(), "accountdb");
-    DBI        messagedb  = dbiFactory.build(environment, config.getMessageStoreConfiguration(), "messagedb");
+    DBIFactory dbiFactory  = new DBIFactory();
+    DBI        database    = dbiFactory.build(environment, config.getDataSourceFactory(), "accountdb");
+    DBI        messagedb   = dbiFactory.build(environment, config.getMessageStoreConfiguration(), "messagedb");
+    DBI        whitelistdb = dbiFactory.build(environment, config.getWhitelistStoreConfiguration(), "whitelistdb");
 
     Accounts        accounts        = database.onDemand(Accounts.class);
     PendingAccounts pendingAccounts = database.onDemand(PendingAccounts.class);
     PendingDevices  pendingDevices  = database.onDemand(PendingDevices.class);
     Keys            keys            = database.onDemand(Keys.class);
     Messages        messages        = messagedb.onDemand(Messages.class);
+    Whitelist       whitelist       = whitelistdb.onDemand(Whitelist.class);
 
     RedisClientFactory cacheClientFactory = new RedisClientFactory(config.getCacheConfiguration().getUrl());
     JedisPool          cacheClient        = cacheClientFactory.getRedisClientPool();
@@ -173,6 +183,7 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
     AccountsManager            accountsManager            = new AccountsManager(accounts, directory, cacheClient);
     FederatedClientManager     federatedClientManager     = new FederatedClientManager(environment, config.getJerseyClientConfiguration(), config.getFederationConfiguration());
     MessagesManager            messagesManager            = new MessagesManager(messages);
+    WhitelistManager           whitelistManager           = new WhitelistManager(whitelist);
     DeadLetterHandler          deadLetterHandler          = new DeadLetterHandler(messagesManager);
     DispatchManager            dispatchManager            = new DispatchManager(cacheClientFactory, Optional.<DispatchChannel>of(deadLetterHandler));
     PubSubManager              pubSubManager              = new PubSubManager(cacheClient, dispatchManager);
@@ -210,7 +221,7 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
                                                              .buildAuthFilter()));
     environment.jersey().register(new AuthValueFactoryProvider.Binder());
 
-    environment.jersey().register(new AccountController(pendingAccountsManager, accountsManager, rateLimiters, smsSender, messagesManager, new TimeProvider(), authorizationKey, config.getTestDevices()));
+    environment.jersey().register(new AccountController(pendingAccountsManager, accountsManager, rateLimiters, smsSender, messagesManager, whitelistManager, new TimeProvider(), authorizationKey, config.getTestDevices()));
     environment.jersey().register(new DeviceController(pendingDevicesManager, accountsManager, messagesManager, rateLimiters));
     environment.jersey().register(new DirectoryController(rateLimiters, directory));
     environment.jersey().register(new FederationControllerV1(accountsManager, attachmentController, messageController, keysControllerV1));

@@ -17,6 +17,7 @@ import org.whispersystems.textsecuregcm.sms.SmsSender;
 import org.whispersystems.textsecuregcm.storage.Account;
 import org.whispersystems.textsecuregcm.storage.AccountsManager;
 import org.whispersystems.textsecuregcm.storage.MessagesManager;
+import org.whispersystems.textsecuregcm.storage.WhitelistManager;
 import org.whispersystems.textsecuregcm.storage.PendingAccountsManager;
 import org.whispersystems.textsecuregcm.tests.util.AuthHelper;
 import org.whispersystems.textsecuregcm.util.SystemMapper;
@@ -41,6 +42,7 @@ public class AccountControllerTest {
   private        RateLimiter            rateLimiter            = mock(RateLimiter.class           );
   private        SmsSender              smsSender              = mock(SmsSender.class             );
   private        MessagesManager        storedMessages         = mock(MessagesManager.class       );
+  private        WhitelistManager       whitelistManager       = mock(WhitelistManager.class      );
   private        TimeProvider           timeProvider           = mock(TimeProvider.class          );
   private static byte[]                 authorizationKey       = decodeHex("3a078586eea8971155f5c1ebd73c8c923cbec1c3ed22a54722e4e88321dc749f");
 
@@ -55,6 +57,7 @@ public class AccountControllerTest {
                                                                                                rateLimiters,
                                                                                                smsSender,
                                                                                                storedMessages,
+                                                                                               whitelistManager,
                                                                                                timeProvider,
                                                                                                Optional.of(authorizationKey),
                                                                                                new HashMap<String, Integer>()))
