@@ -19,6 +19,9 @@ s3: # AWS S3 configuration
   # correct permissions.
   attachmentsBucket:
 
+  # to use minio please add "providerUrl":
+  #providerUrl:
+
 directory: # Redis server configuration for TS directory
   url:
 
@@ -29,6 +32,12 @@ websocket:
   enabled: true
 
 messageStore: # Postgres database configuration for message store
+  driverClass: org.postgresql.Driver
+  user:
+  password:
+  url:
+
+whitelistStore: # Whitelisted client
   driverClass: org.postgresql.Driver
   user:
   password:
