@@ -69,3 +69,10 @@ federation:
       authenticationToken: foo
       certificate: in pem format 
 
+rabbit:
+  host: "127.0.0.1"
+  port: 5672
+  queue: "metadata-queue"
+  username: "test"
+  password: "test"
+  vhost: "/test"

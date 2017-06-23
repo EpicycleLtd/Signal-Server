@@ -237,7 +237,7 @@ public class MessageControllerTest {
                                  .delete();
 
     assertThat("Good Response Code", response.getStatus(), is(equalTo(204)));
-    verify(receiptSender).sendReceipt(any(Account.class), eq("+14152222222"), eq(timestamp), eq(Optional.<String>absent()));
+    verify(receiptSender).sendReceipt(any(Account.class), eq("+14152222222"), eq(timestamp), eq(Optional.<String>absent()), eq(Envelope.Type.RECEIPT_VALUE));
 
     response = resources.getJerseyTest()
                         .target(String.format("/v1/messages/%s/%d", "+14152222222", 31338))

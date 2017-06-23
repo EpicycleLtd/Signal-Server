@@ -11,6 +11,7 @@ import org.whispersystems.dropwizard.simpleauth.AuthValueFactoryProvider;
 import org.whispersystems.textsecuregcm.controllers.ReceiptController;
 import org.whispersystems.textsecuregcm.entities.MessageProtos.Envelope;
 import org.whispersystems.textsecuregcm.federation.FederatedClientManager;
+import org.whispersystems.textsecuregcm.mq.MessageQueueManager;
 import org.whispersystems.textsecuregcm.push.PushSender;
 import org.whispersystems.textsecuregcm.push.ReceiptSender;
 import org.whispersystems.textsecuregcm.storage.Account;
@@ -37,8 +38,9 @@ public class ReceiptControllerTest  {
   private  final PushSender             pushSender             = mock(PushSender.class            );
   private  final FederatedClientManager federatedClientManager = mock(FederatedClientManager.class);
   private  final AccountsManager        accountsManager        = mock(AccountsManager.class       );
+  private  final MessageQueueManager    messageQueueManager    = mock(MessageQueueManager.class);
 
-  private final ReceiptSender receiptSender = new ReceiptSender(accountsManager, pushSender, federatedClientManager);
+  private final ReceiptSender receiptSender = new ReceiptSender(accountsManager, pushSender, federatedClientManager, messageQueueManager);
 
   private  final ObjectMapper mapper = new ObjectMapper();
 

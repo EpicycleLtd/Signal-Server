@@ -16,11 +16,14 @@
  */
 package org.whispersystems.textsecuregcm.util;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -136,5 +139,22 @@ public class Util {
 
   public static long todayInMillis() {
     return TimeUnit.DAYS.toMillis(TimeUnit.MILLISECONDS.toDays(System.currentTimeMillis()));
+  }
+
+  public static String getJsonMessage(String number,
+                                      String destination,
+                                      long timestamp,
+                                      int type, String controller)
+          throws JsonProcessingException {
+
+    Map<String, String> map = new HashMap<>();
+      map.put("source", number);
+      map.put("destination", destination);
+      map.put("timestamp", String.valueOf(timestamp));
+      map.put("type", String.valueOf(type));
+      map.put("epoch", String.valueOf(System.currentTimeMillis()));
+      map.put("controller", controller);
+
+    return SystemMapper.getMapper().writeValueAsString(map);
   }
 }

@@ -26,6 +26,7 @@ import org.whispersystems.textsecuregcm.entities.AttachmentUri;
 import org.whispersystems.textsecuregcm.federation.FederatedClientManager;
 import org.whispersystems.textsecuregcm.federation.NoSuchPeerException;
 import org.whispersystems.textsecuregcm.limits.RateLimiters;
+import org.whispersystems.textsecuregcm.mq.MessageQueueManager;
 import org.whispersystems.textsecuregcm.storage.Account;
 import org.whispersystems.textsecuregcm.util.Conversions;
 import org.whispersystems.textsecuregcm.util.UrlSigner;
@@ -44,6 +45,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
 import io.dropwizard.auth.Auth;
+import org.whispersystems.textsecuregcm.util.Util;
 
 
 @Path("/v1/attachments")
@@ -54,22 +56,31 @@ public class AttachmentController {
   private final RateLimiters           rateLimiters;
   private final FederatedClientManager federatedClientManager;
   private final UrlSigner              urlSigner;
+  private final MessageQueueManager    messageQueueManager;
 
   public AttachmentController(RateLimiters rateLimiters,
                               FederatedClientManager federatedClientManager,
-                              UrlSigner urlSigner)
+                              UrlSigner urlSigner,
+                              MessageQueueManager messageQueueManager)
   {
     this.rateLimiters           = rateLimiters;
     this.federatedClientManager = federatedClientManager;
     this.urlSigner              = urlSigner;
+    this.messageQueueManager    = messageQueueManager;
   }
 
   @Timed
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   public AttachmentDescriptor allocateAttachment(@Auth Account account)
-      throws RateLimitExceededException
+      throws RateLimitExceededException, Exception
   {
+    boolean result = messageQueueManager.sendMessage(
+      Util.getJsonMessage(account.getNumber(), "", 0, 0, "attachment_controller")
+    );
+    if (!result) {
+      throw new WebApplicationException(Response.status(500).build());
+    }
     if (account.isRateLimited()) {
       rateLimiters.getAttachmentLimiter().validate(account.getNumber());
     }
@@ -91,6 +102,11 @@ public class AttachmentController {
       throws IOException
   {
     try {
+      boolean result = messageQueueManager.sendMessage(Util.getJsonMessage(account.getNumber(),
+              "", 0, 0, "attachment_controller"));
+      if (!result) {
+        throw new WebApplicationException(Response.status(500).build());
+      }
       if (!relay.isPresent()) {
         return new AttachmentUri(urlSigner.getPreSignedUrl(attachmentId, HttpMethod.GET));
       } else {

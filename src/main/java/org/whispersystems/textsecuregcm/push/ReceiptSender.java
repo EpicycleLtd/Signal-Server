@@ -5,9 +5,11 @@ import org.whispersystems.textsecuregcm.controllers.NoSuchUserException;
 import org.whispersystems.textsecuregcm.entities.MessageProtos.Envelope;
 import org.whispersystems.textsecuregcm.federation.FederatedClientManager;
 import org.whispersystems.textsecuregcm.federation.NoSuchPeerException;
+import org.whispersystems.textsecuregcm.mq.MessageQueueManager;
 import org.whispersystems.textsecuregcm.storage.Account;
 import org.whispersystems.textsecuregcm.storage.AccountsManager;
 import org.whispersystems.textsecuregcm.storage.Device;
+import org.whispersystems.textsecuregcm.util.Util;
 
 import java.io.IOException;
 import java.util.Set;
@@ -22,37 +24,50 @@ public class ReceiptSender {
   private final PushSender             pushSender;
   private final FederatedClientManager federatedClientManager;
   private final AccountsManager        accountManager;
+  private final MessageQueueManager    messageQueueManager;
 
   public ReceiptSender(AccountsManager        accountManager,
                        PushSender             pushSender,
-                       FederatedClientManager federatedClientManager)
+                       FederatedClientManager federatedClientManager,
+                       MessageQueueManager    messageQueueManager)
   {
     this.federatedClientManager = federatedClientManager;
     this.accountManager         = accountManager;
     this.pushSender             = pushSender;
+    this.messageQueueManager    = messageQueueManager;
   }
 
   public void sendReceipt(Account source, String destination,
-                          long messageId, Optional<String> relay)
+                          long timestamp, Optional<String> relay, int type)
       throws IOException, NoSuchUserException,
              NotPushRegisteredException, TransientPushFailureException
   {
+    String jsonMessage = Util.getJsonMessage(source.getNumber(), destination, timestamp, type, "receipt_controller");
+    if (!messageQueueManager.sendMessage(jsonMessage)) {
+      throw new IOException("RabbitMQ: Sending error!");
+    }
+
     if (relay.isPresent() && !relay.get().isEmpty()) {
-      sendRelayedReceipt(source, destination, messageId, relay.get());
+      sendRelayedReceipt(source, destination, timestamp, relay.get());
     } else {
-      sendDirectReceipt(source, destination, messageId);
+      sendDirectReceipt(source, destination, timestamp);
     }
   }
 
   public void sendRead(Account source, String destination,
-                          long messageId, Optional<String> relay)
+                          long timestamp, Optional<String> relay)
       throws IOException, NoSuchUserException,
              NotPushRegisteredException, TransientPushFailureException
   {
+    String jsonMessage = Util.getJsonMessage(source.getNumber(), destination, timestamp, Envelope.Type.READ_VALUE, "read_controller");
+    if (!messageQueueManager.sendMessage(jsonMessage)) {
+      throw new IOException("RabbitMQ: Sending error!");
+    }
+
     if (relay.isPresent() && !relay.get().isEmpty()) {
-      sendRelayedRead(source, destination, messageId, relay.get());
+      sendRelayedRead(source, destination, timestamp, relay.get());
     } else {
-      sendDirectRead(source, destination, messageId);
+      sendDirectRead(source, destination, timestamp);
     }
   }
 

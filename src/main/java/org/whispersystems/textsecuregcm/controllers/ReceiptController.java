@@ -2,6 +2,7 @@ package org.whispersystems.textsecuregcm.controllers;
 
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Optional;
+import org.whispersystems.textsecuregcm.entities.MessageProtos;
 import org.whispersystems.textsecuregcm.push.NotPushRegisteredException;
 import org.whispersystems.textsecuregcm.push.ReceiptSender;
 import org.whispersystems.textsecuregcm.push.TransientPushFailureException;
@@ -38,13 +39,15 @@ public class ReceiptController {
       throws IOException
   {
     try {
-      receiptSender.sendReceipt(source, destination, messageId, relay);
+      receiptSender.sendReceipt(source, destination, messageId, relay, MessageProtos.Envelope.Type.RECEIPT_VALUE);
       //Log by Imre
       logger.info("event=delivered_sent from=" + source.getNumber() + " to=" + destination + " messageid=" + messageId);
     } catch (NoSuchUserException | NotPushRegisteredException e) {
       throw new WebApplicationException(Response.Status.NOT_FOUND);
     } catch (TransientPushFailureException e) {
       throw new IOException(e);
+    } catch (IOException e) {
+      throw new WebApplicationException(Response.status(500).build());
     }
   }
 

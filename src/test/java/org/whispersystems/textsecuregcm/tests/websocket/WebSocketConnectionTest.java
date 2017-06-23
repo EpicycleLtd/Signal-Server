@@ -158,7 +158,7 @@ public class WebSocketConnectionTest {
     futures.get(2).setException(new IOException());
 
     verify(storedMessages, times(1)).delete(eq(account.getNumber()), eq(2L));
-    verify(receiptSender, times(1)).sendReceipt(eq(account), eq("sender1"), eq(2222L), eq(Optional.<String>absent()));
+    verify(receiptSender, times(1)).sendReceipt(eq(account), eq("sender1"), eq(2222L), eq(Optional.<String>absent()), eq(Envelope.Type.RECEIPT_VALUE));
 
     connection.onDispatchUnsubscribed(websocketAddress.serialize());
     verify(client).close(anyInt(), anyString());
@@ -244,7 +244,7 @@ public class WebSocketConnectionTest {
     futures.get(1).set(response);
     futures.get(0).setException(new IOException());
 
-    verify(receiptSender, times(1)).sendReceipt(eq(account), eq("sender2"), eq(secondMessage.getTimestamp()), eq(Optional.<String>absent()));
+    verify(receiptSender, times(1)).sendReceipt(eq(account), eq("sender2"), eq(secondMessage.getTimestamp()), eq(Optional.<String>absent()), eq(Envelope.Type.RECEIPT_VALUE));
     verify(pushSender, times(1)).sendMessage(eq(account), eq(device), any(Envelope.class));
 
     connection.onDispatchUnsubscribed(websocketAddress.serialize());
