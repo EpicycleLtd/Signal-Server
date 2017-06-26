@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import io.dropwizard.testing.junit.ResourceTestRule;
+import org.whispersystems.textsecuregcm.util.SystemMapper;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
@@ -48,6 +49,7 @@ public class ReceiptControllerTest  {
   public final ResourceTestRule resources = ResourceTestRule.builder()
                                                             .addProvider(AuthHelper.getAuthFilter())
                                                             .addProvider(new AuthValueFactoryProvider.Binder())
+                                                             .setMapper(SystemMapper.getMapper())
                                                             .setTestContainerFactory(new GrizzlyWebTestContainerFactory())
                                                             .addResource(new ReceiptController(receiptSender))
                                                             .build();
@@ -68,6 +70,7 @@ public class ReceiptControllerTest  {
 
     when(accountsManager.get(eq(SINGLE_DEVICE_RECIPIENT))).thenReturn(Optional.of(singleDeviceAccount));
     when(accountsManager.get(eq(MULTI_DEVICE_RECIPIENT))).thenReturn(Optional.of(multiDeviceAccount));
+    when(messageQueueManager.sendMessage(any(String.class))).thenReturn(true);
   }
 
   @Test

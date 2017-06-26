@@ -35,6 +35,7 @@ import static org.mockito.Mockito.*;
 public class AccountControllerTest {
 
   private static final String SENDER = "+14152222222";
+  private static final String BLACK_LISTED_SENDER = "+14152222223";
 
   private        PendingAccountsManager pendingAccountsManager = mock(PendingAccountsManager.class);
   private        AccountsManager        accountsManager        = mock(AccountsManager.class       );
@@ -73,6 +74,7 @@ public class AccountControllerTest {
     when(timeProvider.getCurrentTimeMillis()).thenReturn(System.currentTimeMillis());
 
     when(pendingAccountsManager.getCodeForNumber(SENDER)).thenReturn(Optional.of("1234"));
+    when(whitelistManager.isInWhitelist(SENDER, 1)).thenReturn(true);
   }
 
   @Test
@@ -86,8 +88,15 @@ public class AccountControllerTest {
     assertThat(response.getStatus()).isEqualTo(200);
 
     verify(smsSender).deliverSmsVerification(eq(SENDER), eq(Optional.<String>absent()), anyString());
+
+    response = resources.getJerseyTest()
+                    .target(String.format("/v1/accounts/sms/code/%s", BLACK_LISTED_SENDER))
+                    .request()
+                    .get();
+
+    assertThat(response.getStatus()).isEqualTo(403);
   }
-  
+
   @Test
   public void testSendiOSCode() throws Exception {
     Response response =
