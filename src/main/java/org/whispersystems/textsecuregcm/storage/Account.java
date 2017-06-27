@@ -27,7 +27,12 @@ import java.util.Set;
 
 public class Account {
 
+  public static final int WHITELISTED = 1;
+  public static final int BLACKLISTED = 0;
   public static final int MEMCACHE_VERION = 5;
+
+  @JsonProperty
+  private int whitelisted = WHITELISTED;
 
   @JsonProperty
   private String number;
@@ -72,6 +77,18 @@ public class Account {
 
   public void removeDevice(long deviceId) {
     this.devices.remove(new Device(deviceId, null, null, null, null, null, null, null, false, 0, null, 0, 0, false, "NA"));
+  }
+
+  public boolean isWhitelisted(){
+    return this.whitelisted == WHITELISTED;
+  }
+
+  public void setWhitelisted(int type) {
+    this.whitelisted = type;
+  }
+
+  public int getWhitelisted() {
+    return this.whitelisted;
   }
 
   public Set<Device> getDevices() {
