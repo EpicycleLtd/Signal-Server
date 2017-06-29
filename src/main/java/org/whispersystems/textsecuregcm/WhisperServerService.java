@@ -47,6 +47,7 @@ import org.whispersystems.textsecuregcm.controllers.MessageController;
 import org.whispersystems.textsecuregcm.controllers.ProvisioningController;
 import org.whispersystems.textsecuregcm.controllers.ReceiptController;
 import org.whispersystems.textsecuregcm.controllers.ReadController;
+import org.whispersystems.textsecuregcm.controllers.WhitelistController;
 import org.whispersystems.textsecuregcm.federation.FederatedClientManager;
 import org.whispersystems.textsecuregcm.federation.FederatedPeer;
 import org.whispersystems.textsecuregcm.limits.RateLimiters;
@@ -245,6 +246,7 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
     environment.jersey().register(new ReceiptController(receiptSender));
     environment.jersey().register(new ReadController(receiptSender));
     environment.jersey().register(new ProvisioningController(rateLimiters, pushSender));
+    environment.jersey().register(new WhitelistController(whitelistManager, accountsManager));
     environment.jersey().register(attachmentController);
     environment.jersey().register(keysControllerV1);
     environment.jersey().register(keysControllerV2);
@@ -259,7 +261,7 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
       WebSocketEnvironment provisioningEnvironment = new WebSocketEnvironment(environment, config);
       provisioningEnvironment.setConnectListener(new ProvisioningConnectListener(pubSubManager));
       provisioningEnvironment.jersey().register(new KeepAliveController(pubSubManager));
-      
+
       WebSocketResourceProviderFactory webSocketServlet    = new WebSocketResourceProviderFactory(webSocketEnvironment   );
       WebSocketResourceProviderFactory provisioningServlet = new WebSocketResourceProviderFactory(provisioningEnvironment);
 

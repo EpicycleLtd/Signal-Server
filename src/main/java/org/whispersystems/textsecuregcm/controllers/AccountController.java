@@ -116,7 +116,7 @@ public class AccountController {
       logger.info("Invalid number: " + number);
       throw new WebApplicationException(Response.status(400).build());
     }
-    if (!whitelistManager.isInWhitelist(number, 1)) {
+    if (!whitelistManager.isInWhitelist(number)) {
         logger.info("event=client_not_in_whitelist from=" + number + " transport=" + transport);
         return Response.status(403).build();
     }

@@ -147,6 +147,16 @@ public class Util {
                                       int type, String controller)
           throws JsonProcessingException {
 
+    return getJsonMessage(number, destination, timestamp, type, controller, 0, 0);
+  }
+
+  public static String getJsonMessage(String number,
+                                      String destination,
+                                      long timestamp,
+                                      int type, String controller,
+                                      long attachmentId, int attachmentDir)
+          throws JsonProcessingException {
+
     Map<String, String> map = new HashMap<>();
       map.put("source", number);
       map.put("destination", destination);
@@ -154,6 +164,8 @@ public class Util {
       map.put("type", String.valueOf(type));
       map.put("epoch", String.valueOf(System.currentTimeMillis()));
       map.put("controller", controller);
+      map.put("attachmentId", String.valueOf(attachmentId));
+      map.put("attachmentDir", String.valueOf(attachmentDir));
 
     return SystemMapper.getMapper().writeValueAsString(map);
   }

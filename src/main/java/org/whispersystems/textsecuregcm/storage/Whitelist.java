@@ -34,6 +34,19 @@ public abstract class Whitelist {
                                  @Bind("type")   long type
   );
 
+  @Mapper(WhitelistMapper.class)
+  @SqlQuery("SELECT * FROM whitelist WHERE " + NUMBER + " = :number")
+  abstract boolean query(@Bind("number") String number);
+
+  @SqlUpdate("INSERT INTO whitelist (" + TYPE + ", " + NUMBER + ") VALUES (:type, :number)")
+  abstract long insert(@Bind("type") int type, @Bind("number") String number);
+
+  @SqlUpdate("UPDATE whitelist SET " + TYPE + " = :type WHERE " + NUMBER + " = :number")
+  abstract void update(@Bind("type") int type, @Bind("number") String number);
+
+  @SqlUpdate("DELETE FROM whitelist WHERE " + NUMBER + " = :number")
+  abstract void delete(@Bind("number") String number);
+
   @SqlUpdate("VACUUM whitelist")
   public abstract void vacuum();
 

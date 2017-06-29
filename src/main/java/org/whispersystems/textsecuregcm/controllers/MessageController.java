@@ -125,7 +125,8 @@ public class MessageController {
 
       if (!isSyncMessage) {
         for (IncomingMessage message : messages.getMessages()) {
-          boolean result = messageQueueManager.sendMessage(Util.getJsonMessage(source.getNumber(), destinationName, messages.getTimestamp(), message.getType(), "message_controller"));
+          boolean result = messageQueueManager.sendMessage(Util.getJsonMessage(source.getNumber(),
+                  destinationName, messages.getTimestamp(), message.getType(), "message"));
           if (!result) {
             throw new WebApplicationException(Response.status(500).build());
           }

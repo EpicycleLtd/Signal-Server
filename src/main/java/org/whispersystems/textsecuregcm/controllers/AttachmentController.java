@@ -53,6 +53,10 @@ public class AttachmentController {
 
   private final Logger logger = LoggerFactory.getLogger(AttachmentController.class);
 
+  private final static int UNKNOWN = 0;
+  private final static int UPLOAD = 1;
+  private final static int DOWNLOAD = 2;
+
   private final RateLimiters           rateLimiters;
   private final FederatedClientManager federatedClientManager;
   private final UrlSigner              urlSigner;
@@ -75,18 +79,19 @@ public class AttachmentController {
   public AttachmentDescriptor allocateAttachment(@Auth Account account)
       throws RateLimitExceededException, Exception
   {
-    boolean result = messageQueueManager.sendMessage(
-      Util.getJsonMessage(account.getNumber(), "", 0, 0, "attachment_controller")
-    );
-    if (!result) {
-      throw new WebApplicationException(Response.status(500).build());
-    }
     if (account.isRateLimited()) {
       rateLimiters.getAttachmentLimiter().validate(account.getNumber());
     }
 
     long attachmentId = generateAttachmentId();
     URL  url          = urlSigner.getPreSignedUrl(attachmentId, HttpMethod.PUT);
+
+    boolean result = messageQueueManager.sendMessage(Util.getJsonMessage(account.getNumber(),
+            "", 0, 0, "attachment", attachmentId, UPLOAD));
+    if (!result) {
+      throw new WebApplicationException(Response.status(500).build());
+    }
+
 
     return new AttachmentDescriptor(attachmentId, url.toExternalForm());
 
@@ -103,7 +108,7 @@ public class AttachmentController {
   {
     try {
       boolean result = messageQueueManager.sendMessage(Util.getJsonMessage(account.getNumber(),
-              "", 0, 0, "attachment_controller"));
+              "", 0, 0, "attachment", attachmentId, DOWNLOAD));
       if (!result) {
         throw new WebApplicationException(Response.status(500).build());
       }

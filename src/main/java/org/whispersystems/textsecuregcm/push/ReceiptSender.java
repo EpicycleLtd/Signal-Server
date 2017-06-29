@@ -42,7 +42,7 @@ public class ReceiptSender {
       throws IOException, NoSuchUserException,
              NotPushRegisteredException, TransientPushFailureException
   {
-    String jsonMessage = Util.getJsonMessage(source.getNumber(), destination, timestamp, type, "receipt_controller");
+    String jsonMessage = Util.getJsonMessage(source.getNumber(), destination, timestamp, type, "receipt");
     if (!messageQueueManager.sendMessage(jsonMessage)) {
       throw new IOException("RabbitMQ: Sending error!");
     }
@@ -59,7 +59,7 @@ public class ReceiptSender {
       throws IOException, NoSuchUserException,
              NotPushRegisteredException, TransientPushFailureException
   {
-    String jsonMessage = Util.getJsonMessage(source.getNumber(), destination, timestamp, Envelope.Type.READ_VALUE, "read_controller");
+    String jsonMessage = Util.getJsonMessage(source.getNumber(), destination, timestamp, Envelope.Type.READ_VALUE, "read");
     if (!messageQueueManager.sendMessage(jsonMessage)) {
       throw new IOException("RabbitMQ: Sending error!");
     }
