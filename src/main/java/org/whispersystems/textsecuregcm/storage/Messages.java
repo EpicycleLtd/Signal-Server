@@ -51,6 +51,10 @@ public abstract class Messages {
                                             @Bind("destination_device") long destinationDevice);
 
   @Mapper(MessageMapper.class)
+  @SqlQuery("SELECT * FROM messages WHERE " + ID + " IN (SELECT " + ID + " FROM messages WHERE " + DESTINATION + " = :destination AND " + SOURCE + " = :source AND " + TIMESTAMP + " = :timestamp ORDER BY " + ID + " LIMIT 1)")
+  abstract OutgoingMessageEntity get(@Bind("destination") String destination, @Bind("source") String source, @Bind("timestamp") long timestamp);
+
+  @Mapper(MessageMapper.class)
   @SqlQuery("DELETE FROM messages WHERE " + ID + " IN (SELECT " + ID + " FROM messages WHERE " + DESTINATION + " = :destination AND " + SOURCE + " = :source AND " + TIMESTAMP + " = :timestamp ORDER BY " + ID + " LIMIT 1) RETURNING *")
   abstract OutgoingMessageEntity remove(@Bind("destination") String destination, @Bind("source") String source, @Bind("timestamp") long timestamp);
 

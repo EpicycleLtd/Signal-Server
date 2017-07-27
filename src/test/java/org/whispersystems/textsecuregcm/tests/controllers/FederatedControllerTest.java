@@ -17,6 +17,7 @@ import org.whispersystems.textsecuregcm.entities.MessageProtos;
 import org.whispersystems.textsecuregcm.entities.PreKeyResponseItemV2;
 import org.whispersystems.textsecuregcm.entities.PreKeyResponseV2;
 import org.whispersystems.textsecuregcm.entities.SignedPreKey;
+import org.whispersystems.textsecuregcm.mq.MessageQueueManager;
 import org.whispersystems.textsecuregcm.federation.FederatedClientManager;
 import org.whispersystems.textsecuregcm.limits.RateLimiter;
 import org.whispersystems.textsecuregcm.limits.RateLimiters;
@@ -36,6 +37,7 @@ import java.util.LinkedList;
 import java.util.Set;
 
 import io.dropwizard.testing.junit.ResourceTestRule;
+import org.whispersystems.textsecuregcm.util.SystemMapper;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -56,19 +58,21 @@ public class FederatedControllerTest {
   private MessagesManager        messagesManager        = mock(MessagesManager.class);
   private RateLimiters           rateLimiters           = mock(RateLimiters.class          );
   private RateLimiter            rateLimiter            = mock(RateLimiter.class           );
+  private MessageQueueManager    messageQueueManager    = mock(MessageQueueManager.class   );
 
   private final SignedPreKey signedPreKey = new SignedPreKey(3333, "foo", "baar");
   private final PreKeyResponseV2 preKeyResponseV2 = new PreKeyResponseV2("foo", new LinkedList<PreKeyResponseItemV2>());
 
   private final ObjectMapper mapper = new ObjectMapper();
 
-  private final MessageController messageController = new MessageController(rateLimiters, pushSender, receiptSender, accountsManager, messagesManager, federatedClientManager);
+  private final MessageController messageController = new MessageController(rateLimiters, pushSender, receiptSender, accountsManager, messagesManager, federatedClientManager, messageQueueManager);
   private final KeysControllerV2  keysControllerV2  = mock(KeysControllerV2.class);
 
   @Rule
   public final ResourceTestRule resources = ResourceTestRule.builder()
                                                             .addProvider(AuthHelper.getAuthFilter())
                                                             .addProvider(new AuthValueFactoryProvider.Binder())
+                                                            .setMapper(SystemMapper.getMapper())
                                                             .setTestContainerFactory(new GrizzlyWebTestContainerFactory())
                                                             .addResource(new FederationControllerV1(accountsManager, null, messageController, null))
                                                             .addResource(new FederationControllerV2(accountsManager, null, messageController, keysControllerV2))
@@ -98,6 +102,7 @@ public class FederatedControllerTest {
     when(keysControllerV2.getSignedKey(any(Account.class))).thenReturn(Optional.of(signedPreKey));
     when(keysControllerV2.getDeviceKeys(any(Account.class), anyString(), anyString(), any(Optional.class)))
         .thenReturn(Optional.of(preKeyResponseV2));
+    when(messageQueueManager.sendMessage(any(String.class))).thenReturn(true);
   }
 
   @Test

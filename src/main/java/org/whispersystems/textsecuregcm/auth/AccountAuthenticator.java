@@ -58,6 +58,10 @@ public class AccountAuthenticator implements Authenticator<BasicCredentials, Acc
         return Optional.absent();
       }
 
+      if (!account.get().isWhitelisted()){
+        return Optional.absent();
+      }
+
       Optional<Device> device = account.get().getDevice(authorizationHeader.getDeviceId());
 
       if (!device.isPresent()) {

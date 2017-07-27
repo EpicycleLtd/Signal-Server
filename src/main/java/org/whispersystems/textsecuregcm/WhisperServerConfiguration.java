@@ -27,6 +27,7 @@ import org.whispersystems.textsecuregcm.configuration.S3Configuration;
 import org.whispersystems.textsecuregcm.configuration.TestDeviceConfiguration;
 import org.whispersystems.textsecuregcm.configuration.TwilioConfiguration;
 import org.whispersystems.textsecuregcm.configuration.WebsocketConfiguration;
+import org.whispersystems.textsecuregcm.configuration.RabbitConfiguration;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
@@ -66,10 +67,20 @@ public class WhisperServerConfiguration extends Configuration {
   @JsonProperty
   private RedisConfiguration directory;
 
+  @NotNull
+  @Valid
+  @JsonProperty
+  private RabbitConfiguration rabbit;
+
   @Valid
   @NotNull
   @JsonProperty
   private DataSourceFactory messageStore;
+
+  @Valid
+  @NotNull
+  @JsonProperty
+  private DataSourceFactory whitelistStore;
 
   @Valid
   @NotNull
@@ -135,8 +146,16 @@ public class WhisperServerConfiguration extends Configuration {
     return directory;
   }
 
+  public RabbitConfiguration getRabbitConfiguration() {
+    return rabbit;
+  }
+
   public DataSourceFactory getMessageStoreConfiguration() {
     return messageStore;
+  }
+
+  public DataSourceFactory getWhitelistStoreConfiguration() {
+    return whitelistStore;
   }
 
   public DataSourceFactory getDataSourceFactory() {

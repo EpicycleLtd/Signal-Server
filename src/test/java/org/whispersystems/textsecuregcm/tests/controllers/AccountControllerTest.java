@@ -17,6 +17,7 @@ import org.whispersystems.textsecuregcm.sms.SmsSender;
 import org.whispersystems.textsecuregcm.storage.Account;
 import org.whispersystems.textsecuregcm.storage.AccountsManager;
 import org.whispersystems.textsecuregcm.storage.MessagesManager;
+import org.whispersystems.textsecuregcm.storage.WhitelistManager;
 import org.whispersystems.textsecuregcm.storage.PendingAccountsManager;
 import org.whispersystems.textsecuregcm.tests.util.AuthHelper;
 import org.whispersystems.textsecuregcm.util.SystemMapper;
@@ -34,6 +35,7 @@ import static org.mockito.Mockito.*;
 public class AccountControllerTest {
 
   private static final String SENDER = "+14152222222";
+  private static final String BLACK_LISTED_SENDER = "+14152222223";
 
   private        PendingAccountsManager pendingAccountsManager = mock(PendingAccountsManager.class);
   private        AccountsManager        accountsManager        = mock(AccountsManager.class       );
@@ -41,6 +43,7 @@ public class AccountControllerTest {
   private        RateLimiter            rateLimiter            = mock(RateLimiter.class           );
   private        SmsSender              smsSender              = mock(SmsSender.class             );
   private        MessagesManager        storedMessages         = mock(MessagesManager.class       );
+  private        WhitelistManager       whitelistManager       = mock(WhitelistManager.class      );
   private        TimeProvider           timeProvider           = mock(TimeProvider.class          );
   private static byte[]                 authorizationKey       = decodeHex("3a078586eea8971155f5c1ebd73c8c923cbec1c3ed22a54722e4e88321dc749f");
 
@@ -55,6 +58,7 @@ public class AccountControllerTest {
                                                                                                rateLimiters,
                                                                                                smsSender,
                                                                                                storedMessages,
+                                                                                               whitelistManager,
                                                                                                timeProvider,
                                                                                                Optional.of(authorizationKey),
                                                                                                new HashMap<String, Integer>()))
@@ -70,6 +74,7 @@ public class AccountControllerTest {
     when(timeProvider.getCurrentTimeMillis()).thenReturn(System.currentTimeMillis());
 
     when(pendingAccountsManager.getCodeForNumber(SENDER)).thenReturn(Optional.of("1234"));
+    when(whitelistManager.isInWhitelist(SENDER, 1)).thenReturn(true);
   }
 
   @Test
@@ -83,8 +88,15 @@ public class AccountControllerTest {
     assertThat(response.getStatus()).isEqualTo(200);
 
     verify(smsSender).deliverSmsVerification(eq(SENDER), eq(Optional.<String>absent()), anyString());
+
+    response = resources.getJerseyTest()
+                    .target(String.format("/v1/accounts/sms/code/%s", BLACK_LISTED_SENDER))
+                    .request()
+                    .get();
+
+    assertThat(response.getStatus()).isEqualTo(403);
   }
-  
+
   @Test
   public void testSendiOSCode() throws Exception {
     Response response =

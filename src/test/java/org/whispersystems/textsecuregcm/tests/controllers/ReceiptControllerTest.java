@@ -11,6 +11,7 @@ import org.whispersystems.dropwizard.simpleauth.AuthValueFactoryProvider;
 import org.whispersystems.textsecuregcm.controllers.ReceiptController;
 import org.whispersystems.textsecuregcm.entities.MessageProtos.Envelope;
 import org.whispersystems.textsecuregcm.federation.FederatedClientManager;
+import org.whispersystems.textsecuregcm.mq.MessageQueueManager;
 import org.whispersystems.textsecuregcm.push.PushSender;
 import org.whispersystems.textsecuregcm.push.ReceiptSender;
 import org.whispersystems.textsecuregcm.storage.Account;
@@ -25,6 +26,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import io.dropwizard.testing.junit.ResourceTestRule;
+import org.whispersystems.textsecuregcm.util.SystemMapper;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
@@ -37,8 +39,9 @@ public class ReceiptControllerTest  {
   private  final PushSender             pushSender             = mock(PushSender.class            );
   private  final FederatedClientManager federatedClientManager = mock(FederatedClientManager.class);
   private  final AccountsManager        accountsManager        = mock(AccountsManager.class       );
+  private  final MessageQueueManager    messageQueueManager    = mock(MessageQueueManager.class);
 
-  private final ReceiptSender receiptSender = new ReceiptSender(accountsManager, pushSender, federatedClientManager);
+  private final ReceiptSender receiptSender = new ReceiptSender(accountsManager, pushSender, federatedClientManager, messageQueueManager);
 
   private  final ObjectMapper mapper = new ObjectMapper();
 
@@ -46,6 +49,7 @@ public class ReceiptControllerTest  {
   public final ResourceTestRule resources = ResourceTestRule.builder()
                                                             .addProvider(AuthHelper.getAuthFilter())
                                                             .addProvider(new AuthValueFactoryProvider.Binder())
+                                                             .setMapper(SystemMapper.getMapper())
                                                             .setTestContainerFactory(new GrizzlyWebTestContainerFactory())
                                                             .addResource(new ReceiptController(receiptSender))
                                                             .build();
@@ -66,6 +70,7 @@ public class ReceiptControllerTest  {
 
     when(accountsManager.get(eq(SINGLE_DEVICE_RECIPIENT))).thenReturn(Optional.of(singleDeviceAccount));
     when(accountsManager.get(eq(MULTI_DEVICE_RECIPIENT))).thenReturn(Optional.of(multiDeviceAccount));
+    when(messageQueueManager.sendMessage(any(String.class))).thenReturn(true);
   }
 
   @Test

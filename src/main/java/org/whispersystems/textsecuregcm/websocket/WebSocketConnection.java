@@ -140,7 +140,8 @@ public class WebSocketConnection implements DispatchChannel {
     try {
       receiptSender.sendReceipt(account, message.getSource(), message.getTimestamp(),
                                 message.hasRelay() ? Optional.of(message.getRelay()) :
-                                                     Optional.<String>absent());
+                                                     Optional.<String>absent(),
+                                                     Envelope.Type.RECEIPT_VALUE);
     } catch (NoSuchUserException | NotPushRegisteredException  e) {
       logger.info("No longer registered " + e.getMessage());
     } catch(IOException | TransientPushFailureException e) {

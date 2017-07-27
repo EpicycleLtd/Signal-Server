@@ -33,6 +33,7 @@ import org.whispersystems.textsecuregcm.federation.FederatedClient;
 import org.whispersystems.textsecuregcm.federation.FederatedClientManager;
 import org.whispersystems.textsecuregcm.federation.NoSuchPeerException;
 import org.whispersystems.textsecuregcm.limits.RateLimiters;
+import org.whispersystems.textsecuregcm.mq.MessageQueueManager;
 import org.whispersystems.textsecuregcm.push.NotPushRegisteredException;
 import org.whispersystems.textsecuregcm.push.PushSender;
 import org.whispersystems.textsecuregcm.push.ReceiptSender;
@@ -42,6 +43,7 @@ import org.whispersystems.textsecuregcm.storage.AccountsManager;
 import org.whispersystems.textsecuregcm.storage.Device;
 import org.whispersystems.textsecuregcm.storage.MessagesManager;
 import org.whispersystems.textsecuregcm.util.Base64;
+import org.whispersystems.textsecuregcm.util.SystemMapper;
 import org.whispersystems.textsecuregcm.util.Util;
 
 import javax.validation.Valid;
@@ -74,20 +76,37 @@ public class MessageController {
   private final FederatedClientManager federatedClientManager;
   private final AccountsManager        accountsManager;
   private final MessagesManager        messagesManager;
+  private final MessageQueueManager    messageQueueManager;
 
   public MessageController(RateLimiters rateLimiters,
                            PushSender pushSender,
                            ReceiptSender receiptSender,
                            AccountsManager accountsManager,
                            MessagesManager messagesManager,
-                           FederatedClientManager federatedClientManager)
-  {
+                           FederatedClientManager federatedClientManager) {
+      this(rateLimiters,
+           pushSender,
+           receiptSender,
+           accountsManager,
+           messagesManager,
+           federatedClientManager,
+           null);
+  }
+
+  public MessageController(RateLimiters rateLimiters,
+                           PushSender pushSender,
+                           ReceiptSender receiptSender,
+                           AccountsManager accountsManager,
+                           MessagesManager messagesManager,
+                           FederatedClientManager federatedClientManager,
+                           MessageQueueManager messageQueueManager) {
     this.rateLimiters           = rateLimiters;
     this.pushSender             = pushSender;
     this.receiptSender          = receiptSender;
     this.accountsManager        = accountsManager;
     this.messagesManager        = messagesManager;
     this.federatedClientManager = federatedClientManager;
+    this.messageQueueManager    = messageQueueManager;
   }
 
   @Timed
@@ -97,13 +116,23 @@ public class MessageController {
   @Produces(MediaType.APPLICATION_JSON)
   public SendMessageResponse sendMessage(@Auth                     Account source,
                                          @PathParam("destination") String destinationName,
-                                         @Valid                    IncomingMessageList messages)
-      throws IOException, RateLimitExceededException
-  {
+                                         @Valid                    IncomingMessageList messages
+  ) throws IOException, RateLimitExceededException {
     rateLimiters.getMessagesLimiter().validate(source.getNumber() + "__" + destinationName);
 
     try {
       boolean isSyncMessage = source.getNumber().equals(destinationName);
+
+      if (!isSyncMessage) {
+        for (IncomingMessage message : messages.getMessages()) {
+          boolean result = messageQueueManager.sendMessage(Util.getJsonMessage(source.getNumber(),
+                  destinationName, messages.getTimestamp(), message.getType(), "message"));
+          if (!result) {
+            throw new WebApplicationException(Response.status(500).build());
+          }
+        }
+      }
+
       if (Util.isEmpty(messages.getRelay())) sendLocalMessage(source, destinationName, messages, isSyncMessage);
       else                                   sendRelayMessage(source, destinationName, messages, isSyncMessage);
 
@@ -143,13 +172,11 @@ public class MessageController {
       throws IOException
   {
     try {
-      Optional<OutgoingMessageEntity> message = messagesManager.delete(account.getNumber(), source, timestamp);
 
-      //if (message.isPresent() && message.get().getType() != Envelope.Type.RECEIPT_VALUE) {
-      if (message.isPresent() && (
-              message.get().getType() != Envelope.Type.RECEIPT_VALUE &&
-              message.get().getType() != Envelope.Type.READ_VALUE
-          )
+      Optional<OutgoingMessageEntity> message = messagesManager.get(account.getNumber(), source, timestamp);
+
+      if (message.isPresent() && (message.get().getType() != Envelope.Type.READ_VALUE &&
+                                  message.get().getType() != Envelope.Type.RECEIPT_VALUE)
       ){
 
         //Log by Imre
@@ -158,12 +185,16 @@ public class MessageController {
         receiptSender.sendReceipt(account,
                                   message.get().getSource(),
                                   message.get().getTimestamp(),
-                                  Optional.fromNullable(message.get().getRelay()));
+                                  Optional.fromNullable(message.get().getRelay()),
+                                  Envelope.Type.RECEIPT_VALUE);
       }
+      messagesManager.delete(account.getNumber(), source, timestamp);
     } catch (NotPushRegisteredException e) {
       logger.info("User no longer push registered for delivery receipt: " + e.getMessage());
     } catch (NoSuchUserException | TransientPushFailureException e) {
       logger.warn("Sending delivery receipt", e);
+    } catch (IOException e) {
+      logger.warn(e.getMessage());
     }
   }
 

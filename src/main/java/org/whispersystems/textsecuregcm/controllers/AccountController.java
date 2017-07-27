@@ -37,6 +37,7 @@ import org.whispersystems.textsecuregcm.storage.Account;
 import org.whispersystems.textsecuregcm.storage.AccountsManager;
 import org.whispersystems.textsecuregcm.storage.Device;
 import org.whispersystems.textsecuregcm.storage.MessagesManager;
+import org.whispersystems.textsecuregcm.storage.WhitelistManager;
 import org.whispersystems.textsecuregcm.storage.PendingAccountsManager;
 import org.whispersystems.textsecuregcm.util.Util;
 import org.whispersystems.textsecuregcm.util.VerificationCode;
@@ -72,6 +73,7 @@ public class AccountController {
   private final RateLimiters                          rateLimiters;
   private final SmsSender                             smsSender;
   private final MessagesManager                       messagesManager;
+  private final WhitelistManager                      whitelistManager;
   private final TimeProvider                          timeProvider;
   private final Optional<AuthorizationTokenGenerator> tokenGenerator;
   private final Map<String, Integer>                  testDevices;
@@ -81,6 +83,7 @@ public class AccountController {
                            RateLimiters rateLimiters,
                            SmsSender smsSenderFactory,
                            MessagesManager messagesManager,
+                           WhitelistManager whitelistManager,
                            TimeProvider timeProvider,
                            Optional<byte[]> authorizationKey,
                            Map<String, Integer> testDevices)
@@ -90,6 +93,7 @@ public class AccountController {
     this.rateLimiters     = rateLimiters;
     this.smsSender        = smsSenderFactory;
     this.messagesManager  = messagesManager;
+    this.whitelistManager = whitelistManager;
     this.timeProvider     = timeProvider;
     this.testDevices      = testDevices;
     if (authorizationKey.isPresent()) {
@@ -111,6 +115,10 @@ public class AccountController {
     if (!Util.isValidNumber(number)) {
       logger.info("Invalid number: " + number);
       throw new WebApplicationException(Response.status(400).build());
+    }
+    if (!whitelistManager.isInWhitelist(number)) {
+        logger.info("event=client_not_in_whitelist from=" + number + " transport=" + transport);
+        return Response.status(403).build();
     }
     //Log by Imre
     logger.info("event=account_creation_request sent from=" + number + " transport=" + transport);

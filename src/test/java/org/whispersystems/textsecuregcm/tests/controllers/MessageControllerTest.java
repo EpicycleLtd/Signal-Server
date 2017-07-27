@@ -18,6 +18,7 @@ import org.whispersystems.textsecuregcm.entities.StaleDevices;
 import org.whispersystems.textsecuregcm.federation.FederatedClientManager;
 import org.whispersystems.textsecuregcm.limits.RateLimiter;
 import org.whispersystems.textsecuregcm.limits.RateLimiters;
+import org.whispersystems.textsecuregcm.mq.MessageQueueManager;
 import org.whispersystems.textsecuregcm.push.PushSender;
 import org.whispersystems.textsecuregcm.push.ReceiptSender;
 import org.whispersystems.textsecuregcm.storage.Account;
@@ -36,6 +37,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import io.dropwizard.testing.junit.ResourceTestRule;
+import org.whispersystems.textsecuregcm.util.SystemMapper;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -58,6 +60,7 @@ public class MessageControllerTest {
   private  final MessagesManager        messagesManager        = mock(MessagesManager.class);
   private  final RateLimiters           rateLimiters           = mock(RateLimiters.class          );
   private  final RateLimiter            rateLimiter            = mock(RateLimiter.class           );
+  private  final MessageQueueManager    messageQueueManager    = mock(MessageQueueManager.class);
 
   private  final ObjectMapper mapper = new ObjectMapper();
 
@@ -65,9 +68,10 @@ public class MessageControllerTest {
   public final ResourceTestRule resources = ResourceTestRule.builder()
                                                             .addProvider(AuthHelper.getAuthFilter())
                                                             .addProvider(new AuthValueFactoryProvider.Binder())
+                                                            .setMapper(SystemMapper.getMapper())
                                                             .setTestContainerFactory(new GrizzlyWebTestContainerFactory())
                                                             .addResource(new MessageController(rateLimiters, pushSender, receiptSender, accountsManager,
-                                                                                               messagesManager, federatedClientManager))
+                                                                                               messagesManager, federatedClientManager, messageQueueManager))
                                                             .build();
 
 
@@ -89,9 +93,10 @@ public class MessageControllerTest {
     when(accountsManager.get(eq(SINGLE_DEVICE_RECIPIENT))).thenReturn(Optional.of(singleDeviceAccount));
     when(accountsManager.get(eq(MULTI_DEVICE_RECIPIENT))).thenReturn(Optional.of(multiDeviceAccount));
 
+    when(messageQueueManager.sendMessage(any(String.class))).thenReturn(true);
     when(rateLimiters.getMessagesLimiter()).thenReturn(rateLimiter);
   }
-  
+
   @Test
   public synchronized void testSingleDeviceCurrent() throws Exception {
     Response response =
@@ -214,21 +219,37 @@ public class MessageControllerTest {
   @Test
   public synchronized void testDeleteMessages() throws Exception {
     long timestamp = System.currentTimeMillis();
-    when(messagesManager.delete(AuthHelper.VALID_NUMBER, "+14152222222", 31337))
+    when(messagesManager.get(AuthHelper.VALID_NUMBER, "+14152222222", 31337))
         .thenReturn(Optional.of(new OutgoingMessageEntity(31337L,
                                                           Envelope.Type.CIPHERTEXT_VALUE,
                                                           null, timestamp,
                                                           "+14152222222", 1, "hi".getBytes(), null)));
 
-    when(messagesManager.delete(AuthHelper.VALID_NUMBER, "+14152222222", 31338))
+    when(messagesManager.get(AuthHelper.VALID_NUMBER, "+14152222222", 31338))
         .thenReturn(Optional.of(new OutgoingMessageEntity(31337L,
                                                           Envelope.Type.RECEIPT_VALUE,
                                                           null, System.currentTimeMillis(),
                                                           "+14152222222", 1, null, null)));
 
 
-    when(messagesManager.delete(AuthHelper.VALID_NUMBER, "+14152222222", 31339))
+    when(messagesManager.get(AuthHelper.VALID_NUMBER, "+14152222222", 31339))
         .thenReturn(Optional.<OutgoingMessageEntity>absent());
+
+    when(messagesManager.delete(AuthHelper.VALID_NUMBER, "+14152222222", 31337))
+            .thenReturn(Optional.of(new OutgoingMessageEntity(31337L,
+                    Envelope.Type.CIPHERTEXT_VALUE,
+                    null, timestamp,
+                    "+14152222222", 1, "hi".getBytes(), null)));
+
+    when(messagesManager.delete(AuthHelper.VALID_NUMBER, "+14152222222", 31338))
+            .thenReturn(Optional.of(new OutgoingMessageEntity(31337L,
+                    Envelope.Type.RECEIPT_VALUE,
+                    null, System.currentTimeMillis(),
+                    "+14152222222", 1, null, null)));
+
+
+    when(messagesManager.delete(AuthHelper.VALID_NUMBER, "+14152222222", 31339))
+            .thenReturn(Optional.<OutgoingMessageEntity>absent());
 
     Response response = resources.getJerseyTest()
                                  .target(String.format("/v1/messages/%s/%d", "+14152222222", 31337))
@@ -237,7 +258,7 @@ public class MessageControllerTest {
                                  .delete();
 
     assertThat("Good Response Code", response.getStatus(), is(equalTo(204)));
-    verify(receiptSender).sendReceipt(any(Account.class), eq("+14152222222"), eq(timestamp), eq(Optional.<String>absent()));
+    verify(receiptSender).sendReceipt(any(Account.class), eq("+14152222222"), eq(timestamp), eq(Optional.<String>absent()), eq(Envelope.Type.RECEIPT_VALUE));
 
     response = resources.getJerseyTest()
                         .target(String.format("/v1/messages/%s/%d", "+14152222222", 31338))

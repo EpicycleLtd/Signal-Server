@@ -33,6 +33,7 @@ import org.whispersystems.dropwizard.simpleauth.AuthValueFactoryProvider;
 import org.whispersystems.dropwizard.simpleauth.BasicCredentialAuthFilter;
 import org.whispersystems.textsecuregcm.auth.AccountAuthenticator;
 import org.whispersystems.textsecuregcm.auth.FederatedPeerAuthenticator;
+import org.whispersystems.textsecuregcm.configuration.RabbitConfiguration;
 import org.whispersystems.textsecuregcm.controllers.AccountController;
 import org.whispersystems.textsecuregcm.controllers.AttachmentController;
 import org.whispersystems.textsecuregcm.controllers.DeviceController;
@@ -46,6 +47,7 @@ import org.whispersystems.textsecuregcm.controllers.MessageController;
 import org.whispersystems.textsecuregcm.controllers.ProvisioningController;
 import org.whispersystems.textsecuregcm.controllers.ReceiptController;
 import org.whispersystems.textsecuregcm.controllers.ReadController;
+import org.whispersystems.textsecuregcm.controllers.WhitelistController;
 import org.whispersystems.textsecuregcm.federation.FederatedClientManager;
 import org.whispersystems.textsecuregcm.federation.FederatedPeer;
 import org.whispersystems.textsecuregcm.limits.RateLimiters;
@@ -59,6 +61,7 @@ import org.whispersystems.textsecuregcm.metrics.FileDescriptorGauge;
 import org.whispersystems.textsecuregcm.metrics.FreeMemoryGauge;
 import org.whispersystems.textsecuregcm.metrics.NetworkReceivedGauge;
 import org.whispersystems.textsecuregcm.metrics.NetworkSentGauge;
+import org.whispersystems.textsecuregcm.mq.MessageQueueManager;
 import org.whispersystems.textsecuregcm.providers.RedisClientFactory;
 import org.whispersystems.textsecuregcm.providers.RedisHealthCheck;
 import org.whispersystems.textsecuregcm.providers.TimeProvider;
@@ -77,6 +80,8 @@ import org.whispersystems.textsecuregcm.storage.DirectoryManager;
 import org.whispersystems.textsecuregcm.storage.Keys;
 import org.whispersystems.textsecuregcm.storage.Messages;
 import org.whispersystems.textsecuregcm.storage.MessagesManager;
+import org.whispersystems.textsecuregcm.storage.Whitelist;
+import org.whispersystems.textsecuregcm.storage.WhitelistManager;
 import org.whispersystems.textsecuregcm.storage.PendingAccounts;
 import org.whispersystems.textsecuregcm.storage.PendingAccountsManager;
 import org.whispersystems.textsecuregcm.storage.PendingDevices;
@@ -136,6 +141,12 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
         return configuration.getMessageStoreConfiguration();
       }
     });
+    bootstrap.addBundle(new NameableMigrationsBundle<WhisperServerConfiguration>("whitelistdb", "whitelistdb.xml") {
+      @Override
+      public DataSourceFactory getDataSourceFactory(WhisperServerConfiguration configuration) {
+        return configuration.getWhitelistStoreConfiguration();
+      }
+    });
   }
 
   @Override
@@ -152,15 +163,17 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
     environment.getObjectMapper().setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE);
     environment.getObjectMapper().setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
 
-    DBIFactory dbiFactory = new DBIFactory();
-    DBI        database   = dbiFactory.build(environment, config.getDataSourceFactory(), "accountdb");
-    DBI        messagedb  = dbiFactory.build(environment, config.getMessageStoreConfiguration(), "messagedb");
+    DBIFactory dbiFactory  = new DBIFactory();
+    DBI        database    = dbiFactory.build(environment, config.getDataSourceFactory(), "accountdb");
+    DBI        messagedb   = dbiFactory.build(environment, config.getMessageStoreConfiguration(), "messagedb");
+    DBI        whitelistdb = dbiFactory.build(environment, config.getWhitelistStoreConfiguration(), "whitelistdb");
 
     Accounts        accounts        = database.onDemand(Accounts.class);
     PendingAccounts pendingAccounts = database.onDemand(PendingAccounts.class);
     PendingDevices  pendingDevices  = database.onDemand(PendingDevices.class);
     Keys            keys            = database.onDemand(Keys.class);
     Messages        messages        = messagedb.onDemand(Messages.class);
+    Whitelist       whitelist       = whitelistdb.onDemand(Whitelist.class);
 
     RedisClientFactory cacheClientFactory = new RedisClientFactory(config.getCacheConfiguration().getUrl());
     JedisPool          cacheClient        = cacheClientFactory.getRedisClientPool();
@@ -173,6 +186,7 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
     AccountsManager            accountsManager            = new AccountsManager(accounts, directory, cacheClient);
     FederatedClientManager     federatedClientManager     = new FederatedClientManager(environment, config.getJerseyClientConfiguration(), config.getFederationConfiguration());
     MessagesManager            messagesManager            = new MessagesManager(messages);
+    WhitelistManager           whitelistManager           = new WhitelistManager(whitelist);
     DeadLetterHandler          deadLetterHandler          = new DeadLetterHandler(messagesManager);
     DispatchManager            dispatchManager            = new DispatchManager(cacheClientFactory, Optional.<DispatchChannel>of(deadLetterHandler));
     PubSubManager              pubSubManager              = new PubSubManager(cacheClient, dispatchManager);
@@ -182,12 +196,20 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
     FederatedPeerAuthenticator federatedPeerAuthenticator = new FederatedPeerAuthenticator(config.getFederationConfiguration());
     RateLimiters               rateLimiters               = new RateLimiters(config.getLimitsConfiguration(), cacheClient);
 
+    RabbitConfiguration        rabbitConfiguration        = config.getRabbitConfiguration();
+    MessageQueueManager        messageQueueManager        = new MessageQueueManager(rabbitConfiguration.getHost(),
+                                                                                    rabbitConfiguration.getPort(),
+                                                                                    rabbitConfiguration.getVhost(),
+                                                                                    rabbitConfiguration.getUsername(),
+                                                                                    rabbitConfiguration.getPassword(),
+                                                                                    rabbitConfiguration.getQueue());
+
     ApnFallbackManager       apnFallbackManager  = new ApnFallbackManager(pushServiceClient, pubSubManager);
     TwilioSmsSender          twilioSmsSender     = new TwilioSmsSender(config.getTwilioConfiguration());
     SmsSender                smsSender           = new SmsSender(twilioSmsSender);
     UrlSigner                urlSigner           = new UrlSigner(config.getS3Configuration());
     PushSender               pushSender          = new PushSender(apnFallbackManager, pushServiceClient, websocketSender);
-    ReceiptSender            receiptSender       = new ReceiptSender(accountsManager, pushSender, federatedClientManager);
+    ReceiptSender            receiptSender       = new ReceiptSender(accountsManager, pushSender, federatedClientManager, messageQueueManager);
     FeedbackHandler          feedbackHandler     = new FeedbackHandler(pushServiceClient, accountsManager);
     Optional<byte[]>         authorizationKey    = config.getRedphoneConfiguration().getAuthorizationKey();
 
@@ -195,10 +217,16 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
     environment.lifecycle().manage(pubSubManager);
     environment.lifecycle().manage(feedbackHandler);
 
-    AttachmentController attachmentController = new AttachmentController(rateLimiters, federatedClientManager, urlSigner);
+    AttachmentController attachmentController = new AttachmentController(rateLimiters, federatedClientManager, urlSigner, messageQueueManager);
     KeysControllerV1     keysControllerV1     = new KeysControllerV1(rateLimiters, keys, accountsManager, federatedClientManager);
     KeysControllerV2     keysControllerV2     = new KeysControllerV2(rateLimiters, keys, accountsManager, federatedClientManager);
-    MessageController    messageController    = new MessageController(rateLimiters, pushSender, receiptSender, accountsManager, messagesManager, federatedClientManager);
+    MessageController    messageController    = new MessageController(rateLimiters,
+                                                                      pushSender,
+                                                                      receiptSender,
+                                                                      accountsManager,
+                                                                      messagesManager,
+                                                                      federatedClientManager,
+                                                                      messageQueueManager);
 
     environment.jersey().register(new AuthDynamicFeature(new BasicCredentialAuthFilter.Builder<Account>()
                                                              .setAuthenticator(deviceAuthenticator)
@@ -210,7 +238,7 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
                                                              .buildAuthFilter()));
     environment.jersey().register(new AuthValueFactoryProvider.Binder());
 
-    environment.jersey().register(new AccountController(pendingAccountsManager, accountsManager, rateLimiters, smsSender, messagesManager, new TimeProvider(), authorizationKey, config.getTestDevices()));
+    environment.jersey().register(new AccountController(pendingAccountsManager, accountsManager, rateLimiters, smsSender, messagesManager, whitelistManager, new TimeProvider(), authorizationKey, config.getTestDevices()));
     environment.jersey().register(new DeviceController(pendingDevicesManager, accountsManager, messagesManager, rateLimiters));
     environment.jersey().register(new DirectoryController(rateLimiters, directory));
     environment.jersey().register(new FederationControllerV1(accountsManager, attachmentController, messageController, keysControllerV1));
@@ -218,6 +246,7 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
     environment.jersey().register(new ReceiptController(receiptSender));
     environment.jersey().register(new ReadController(receiptSender));
     environment.jersey().register(new ProvisioningController(rateLimiters, pushSender));
+    environment.jersey().register(new WhitelistController(whitelistManager, accountsManager));
     environment.jersey().register(attachmentController);
     environment.jersey().register(keysControllerV1);
     environment.jersey().register(keysControllerV2);
@@ -232,7 +261,7 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
       WebSocketEnvironment provisioningEnvironment = new WebSocketEnvironment(environment, config);
       provisioningEnvironment.setConnectListener(new ProvisioningConnectListener(pubSubManager));
       provisioningEnvironment.jersey().register(new KeepAliveController(pubSubManager));
-      
+
       WebSocketResourceProviderFactory webSocketServlet    = new WebSocketResourceProviderFactory(webSocketEnvironment   );
       WebSocketResourceProviderFactory provisioningServlet = new WebSocketResourceProviderFactory(provisioningEnvironment);
 
