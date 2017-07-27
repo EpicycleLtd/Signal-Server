@@ -23,6 +23,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import org.whispersystems.textsecuregcm.configuration.S3Configuration;
+import io.minio.MinioClient;
 
 import java.net.URL;
 import java.util.Date;
@@ -30,23 +31,56 @@ import java.util.Date;
 public class UrlSigner {
 
   private static final long   DURATION = 60 * 60 * 1000;
+  private static final int    DURATION_M = 60 * 60;
 
   private final AWSCredentials credentials;
   private final String bucket;
+  //
+  private final String accessKey;
+  private final String accessSecret;
+  private final String providerUrl;
 
   public UrlSigner(S3Configuration config) {
     this.credentials = new BasicAWSCredentials(config.getAccessKey(), config.getAccessSecret());
     this.bucket      = config.getAttachmentsBucket();
+    //
+    this.accessKey    = config.getAccessKey();
+    this.accessSecret = config.getAccessSecret();
+    this.providerUrl  = config.getProviderUrl();
   }
 
-  public URL getPreSignedUrl(long attachmentId, HttpMethod method) {
-    AmazonS3                    client  = new AmazonS3Client(credentials);
-    GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucket, String.valueOf(attachmentId), method);
+  public URL getPreSignedUrl(long attachmentId, HttpMethod method)
+    throws Exception
+  {
+    if(this.providerUrl == null || this.providerUrl.isEmpty()) {
+      AmazonS3                    client  = new AmazonS3Client(credentials);
+      GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucket, String.valueOf(attachmentId), method);
 
-    request.setExpiration(new Date(System.currentTimeMillis() + DURATION));
-    request.setContentType("application/octet-stream");
+      request.setExpiration(new Date(System.currentTimeMillis() + DURATION));
+      request.setContentType("application/octet-stream");
 
-    return client.generatePresignedUrl(request);
+      return client.generatePresignedUrl(request);
+    } else {
+      return getPreSignedUrlMinio(attachmentId, method);
+    }
   }
 
+  private URL getPreSignedUrlMinio(long attachmentId, HttpMethod method)
+    throws Exception
+  {
+    MinioClient client = new MinioClient(providerUrl, accessKey, accessSecret);
+    String request;
+    if (method == HttpMethod.GET) {
+      request = client.presignedGetObject(
+        bucket, String.valueOf(attachmentId), DURATION_M
+      );
+    } else if (method == HttpMethod.PUT) {
+      request = client.presignedPutObject(
+        bucket, String.valueOf(attachmentId), DURATION_M
+      );
+    } else {
+      throw new Exception();
+    }
+    return new URL(request);
+  }
 }
