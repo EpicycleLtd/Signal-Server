@@ -84,7 +84,7 @@ public class MessageQueueManager {
                     MessageProperties.PERSISTENT_TEXT_PLAIN,
                     message.getBytes("UTF-8")
                 );
-                log.info("Send message to broker: " + message);
+                log.debug("Send message to broker: " + message);
                 return true;
             } catch (IOException e) {
                 e.printStackTrace();
