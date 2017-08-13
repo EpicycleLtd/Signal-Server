@@ -42,7 +42,7 @@ public class ReadController {
     try {
       receiptSender.sendRead(source, destination, messageId, relay);
       //Log by Imre
-      logger.info("event=read_sent from=" + source.getNumber() + " to=" + destination + " messageid=" + messageId);
+      logger.debug("event=read_sent from=" + source.getNumber() + " to=" + destination + " messageid=" + messageId);
     } catch (NoSuchUserException | NotPushRegisteredException e) {
       throw new WebApplicationException(Response.Status.NOT_FOUND);
     } catch (TransientPushFailureException e) {

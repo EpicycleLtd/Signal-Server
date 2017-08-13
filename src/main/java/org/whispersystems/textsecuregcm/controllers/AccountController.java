@@ -121,7 +121,7 @@ public class AccountController {
         return Response.status(403).build();
     }
     //Log by Imre
-    logger.info("event=account_creation_request sent from=" + number + " transport=" + transport);
+    logger.debug("event=account_creation_request sent from=" + number + " transport=" + transport);
     switch (transport) {
       case "sms":
         rateLimiters.getSmsDestinationLimiter().validate(number);
@@ -144,7 +144,7 @@ public class AccountController {
       smsSender.deliverVoxVerification(number, verificationCode.getVerificationCodeSpeech());
     }
     //Log by Imre
-    logger.info("event=verification_code_sent to=" + number + " code=" + verificationCode.getVerificationCodeDisplay());
+    logger.debug("event=verification_code_sent to=" + number + " code=" + verificationCode.getVerificationCodeDisplay());
 
     return Response.ok().build();
   }
@@ -166,7 +166,7 @@ public class AccountController {
 
       rateLimiters.getVerifyLimiter().validate(number);
       //Log by Imre
-      logger.info("event=verification_code_received from=" + number + " code=" + verificationCode);
+      logger.debug("event=verification_code_received from=" + number + " code=" + verificationCode);
       Optional<String> storedVerificationCode = pendingAccounts.getCodeForNumber(number);
 
       if (!storedVerificationCode.isPresent() ||

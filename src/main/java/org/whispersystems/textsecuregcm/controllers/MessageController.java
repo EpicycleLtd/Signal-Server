@@ -180,7 +180,7 @@ public class MessageController {
       ){
 
         //Log by Imre
-        logger.info("event=delivery_receipt_remove_pending from=" + source + " messageid=" + timestamp);
+        logger.debug("event=delivery_receipt_remove_pending from=" + source + " messageid=" + timestamp);
 
         receiptSender.sendReceipt(account,
                                   message.get().getSource(),
@@ -219,7 +219,7 @@ public class MessageController {
       if (destinationDevice.isPresent()) {
         sendLocalMessage(source, destination, destinationDevice.get(), messages.getTimestamp(), incomingMessage);
         //Log by Imre
-        logger.info("event=message_sent from=" + source.getNumber() + " to=" + destinationName + " messageid=" + messages.getTimestamp());
+        logger.debug("event=message_sent from=" + source.getNumber() + " to=" + destinationName + " messageid=" + messages.getTimestamp());
 
       }
     }

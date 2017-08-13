@@ -110,7 +110,7 @@ public class ReceiptSender {
                                                   .setType(Envelope.Type.RECEIPT)
                                                   .setDeliveryTimestamp(deliveryTimestamp);
     //Log by Imre
-    logger.info("event=message_delivered_direct from=" + source.getNumber() + " to="+ destination + " messageid=" + messageId + " deliverytimestamp=" + deliveryTimestamp);
+    logger.debug("event=message_delivered_direct from=" + source.getNumber() + " to="+ destination + " messageid=" + messageId + " deliverytimestamp=" + deliveryTimestamp);
 
     if (source.getRelay().isPresent()) {
       message.setRelay(source.getRelay().get());
@@ -136,7 +136,7 @@ public class ReceiptSender {
                                                   .setType(Envelope.Type.READ);
 
     //Log by Imre
-    logger.info("event=message_read_direct from=" + source.getNumber() + " to="+ destination + " messageid=" + messageId + " deliverytimestamp=" + deliveryTimestamp);
+    logger.debug("event=message_read_direct from=" + source.getNumber() + " to="+ destination + " messageid=" + messageId + " deliverytimestamp=" + deliveryTimestamp);
 
 
 

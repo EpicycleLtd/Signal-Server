@@ -41,7 +41,7 @@ public class ReceiptController {
     try {
       receiptSender.sendReceipt(source, destination, messageId, relay, MessageProtos.Envelope.Type.RECEIPT_VALUE);
       //Log by Imre
-      logger.info("event=delivered_sent from=" + source.getNumber() + " to=" + destination + " messageid=" + messageId);
+      logger.debug("event=delivered_sent from=" + source.getNumber() + " to=" + destination + " messageid=" + messageId);
     } catch (NoSuchUserException | NotPushRegisteredException e) {
       throw new WebApplicationException(Response.Status.NOT_FOUND);
     } catch (TransientPushFailureException e) {
