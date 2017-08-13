@@ -37,8 +37,8 @@ public class PushSender {
 
   private final Logger logger = LoggerFactory.getLogger(PushSender.class);
 
-//  private static final String APN_PAYLOAD = "{\"aps\":{\"sound\":\"default\",\"content-available\":1,\"badge\":%d,\"alert\":{\"loc-key\":\"APN_Message\"}}}";
-  private static final String APN_PAYLOAD = "{\"aps\":{\"sound\":\"default\",\"content-available\":1,\"alert\":{\"loc-key\":\"APN_Message\"}}}";
+  private static final String APN_PAYLOAD = "{\"aps\":{\"sound\":\"default\",\"content-available\":1,\"badge\":%d,\"alert\":{\"loc-key\":\"APN_Message\"}}}";
+//  private static final String APN_PAYLOAD = "{\"aps\":{\"sound\":\"default\",\"content-available\":1,\"alert\":{\"loc-key\":\"APN_Message\"}}}";
   private static final String APN_SILENT_PAYLOAD = "{\"aps\":{\"content-available\":1}}";
 
   private final ApnFallbackManager apnFallbackManager;
@@ -93,7 +93,7 @@ public class PushSender {
 
       if (!Util.isEmpty(device.getVoipApnId())) {
         apnMessage = new ApnMessage(device.getVoipApnId(), account.getNumber(), (int)device.getId(),
-                                    APN_PAYLOAD,
+                                    String.format(APN_PAYLOAD, deliveryStatus.getMessageQueueDepth()),
                                     true, System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(30));
 
         apnFallbackManager.schedule(new WebsocketAddress(account.getNumber(), device.getId()),
@@ -101,7 +101,7 @@ public class PushSender {
       } else {
         if ( outgoingMessage.getType() != Envelope.Type.READ ) {
             apnMessage = new ApnMessage(device.getApnId(), account.getNumber(), (int)device.getId(),
-                                    APN_PAYLOAD,
+                                    String.format(APN_PAYLOAD, deliveryStatus.getMessageQueueDepth()),
                                     false, ApnMessage.MAX_EXPIRATION);
         } else {
             apnMessage = new ApnMessage(device.getApnId(), account.getNumber(), (int)device.getId(),
