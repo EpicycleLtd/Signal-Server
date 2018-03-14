@@ -20,6 +20,9 @@ public class ProfilesConfiguration {
   @JsonProperty
   private String region;
 
+  @JsonProperty
+  private String providerUrl = null;
+
   public String getAccessKey() {
     return accessKey;
   }
@@ -36,4 +39,7 @@ public class ProfilesConfiguration {
     return region;
   }
 
+  public String getProviderUrl() {
+    return providerUrl;
+  }
 }

@@ -15,6 +15,7 @@ import org.whispersystems.textsecuregcm.configuration.ProfilesConfiguration;
 import org.whispersystems.textsecuregcm.entities.Profile;
 import org.whispersystems.textsecuregcm.entities.ProfileAvatarUploadAttributes;
 import org.whispersystems.textsecuregcm.limits.RateLimiters;
+import org.whispersystems.textsecuregcm.minio.MinioClient;
 import org.whispersystems.textsecuregcm.s3.PolicySigner;
 import org.whispersystems.textsecuregcm.s3.PostPolicyGenerator;
 import org.whispersystems.textsecuregcm.storage.Account;
@@ -39,6 +40,11 @@ import io.dropwizard.auth.Auth;
 @Path("/v1/profile")
 public class ProfileController {
 
+  enum CloudType {
+    MINIO,
+    S3
+  }
+
   private final RateLimiters     rateLimiters;
   private final AccountsManager  accountsManager;
 
@@ -47,6 +53,9 @@ public class ProfileController {
 
   private final AmazonS3            s3client;
   private final String              bucket;
+
+  private final MinioClient         miclient;
+  private final CloudType           cloudType;
 
   public ProfileController(RateLimiters rateLimiters,
                            AccountsManager accountsManager,
@@ -62,6 +71,14 @@ public class ProfileController {
                                             .withCredentials(credentialsProvider)
                                             .withRegion(profilesConfiguration.getRegion())
                                             .build();
+    this.miclient           = new MinioClient(profilesConfiguration.getProviderUrl(),
+                                              profilesConfiguration.getAccessKey(),
+                                              profilesConfiguration.getAccessSecret());
+    if (profilesConfiguration.getProviderUrl() == null || profilesConfiguration.getProviderUrl().isEmpty()) {
+      cloudType = CloudType.S3;
+    } else {
+      cloudType = CloudType.MINIO;
+    }
 
     this.policyGenerator  = new PostPolicyGenerator(profilesConfiguration.getRegion(),
                                                     profilesConfiguration.getBucket(),
@@ -115,7 +132,11 @@ public class ProfileController {
     String               signature      = policySigner.getSignature(now, policy.second());
 
     if (previousAvatar != null && previousAvatar.startsWith("profiles/")) {
-      s3client.deleteObject(bucket, previousAvatar);
+      if (cloudType == CloudType.MINIO) {
+        miclient.deleteObject(bucket, previousAvatar);
+      } else if (cloudType == CloudType.S3) {
+        s3client.deleteObject(bucket, previousAvatar);
+      }
     }
 
     account.setAvatar(objectName);

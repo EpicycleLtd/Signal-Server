@@ -171,7 +171,6 @@ public class PushSender implements Managed {
   public void stop() throws Exception {
     executor.shutdown();
     executor.awaitTermination(5, TimeUnit.MINUTES);
-
     apnSender.stop();
     gcmSender.stop();
   }

@@ -24,18 +24,14 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.whispersystems.textsecuregcm.auth.AuthenticationCredentials;
-import org.whispersystems.textsecuregcm.auth.AuthorizationHeader;
-import org.whispersystems.textsecuregcm.auth.InvalidAuthorizationHeaderException;
-import org.whispersystems.textsecuregcm.auth.StoredVerificationCode;
-import org.whispersystems.textsecuregcm.auth.TurnToken;
-import org.whispersystems.textsecuregcm.auth.TurnTokenGenerator;
+import org.whispersystems.textsecuregcm.auth.*;
 import org.whispersystems.textsecuregcm.entities.AccountAttributes;
 import org.whispersystems.textsecuregcm.entities.ApnRegistrationId;
 import org.whispersystems.textsecuregcm.entities.GcmRegistrationId;
 import org.whispersystems.textsecuregcm.entities.RegistrationLock;
 import org.whispersystems.textsecuregcm.entities.RegistrationLockFailure;
 import org.whispersystems.textsecuregcm.limits.RateLimiters;
+import org.whispersystems.textsecuregcm.providers.TimeProvider;
 import org.whispersystems.textsecuregcm.sms.SmsSender;
 import org.whispersystems.textsecuregcm.sms.TwilioSmsSender;
 import org.whispersystems.textsecuregcm.storage.Account;
@@ -82,6 +78,8 @@ public class AccountController {
   private final RateLimiters                          rateLimiters;
   private final SmsSender                             smsSender;
   private final MessagesManager                       messagesManager;
+  private final TimeProvider                          timeProvider;
+  private final Optional<AuthorizationTokenGenerator> tokenGenerator;
   private final TurnTokenGenerator                    turnTokenGenerator;
   private final Map<String, Integer>                  testDevices;
 
@@ -90,6 +88,8 @@ public class AccountController {
                            RateLimiters rateLimiters,
                            SmsSender smsSenderFactory,
                            MessagesManager messagesManager,
+                           TimeProvider timeProvider,
+                           Optional<byte[]> authorizationKey,
                            TurnTokenGenerator turnTokenGenerator,
                            Map<String, Integer> testDevices)
   {
@@ -98,8 +98,14 @@ public class AccountController {
     this.rateLimiters       = rateLimiters;
     this.smsSender          = smsSenderFactory;
     this.messagesManager    = messagesManager;
+    this.timeProvider       = timeProvider;
     this.testDevices        = testDevices;
     this.turnTokenGenerator = turnTokenGenerator;
+    if (authorizationKey.isPresent()) {
+      tokenGenerator = Optional.of(new AuthorizationTokenGenerator(authorizationKey.get()));
+    } else {
+      tokenGenerator = Optional.absent();
+    }
   }
 
   @Timed
@@ -195,6 +201,54 @@ public class AccountController {
       logger.info("Bad Authorization Header", e);
       throw new WebApplicationException(Response.status(401).build());
     }
+  }
+
+  @Timed
+  @PUT
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Path("/token/{verification_token}")
+  public void verifyToken(@PathParam("verification_token") String verificationToken,
+                          @HeaderParam("Authorization")    String authorizationHeader,
+                          @HeaderParam("X-Signal-Agent")   String userAgent,
+                          @Valid                           AccountAttributes accountAttributes)
+          throws RateLimitExceededException
+  {
+    try {
+      AuthorizationHeader header   = AuthorizationHeader.fromFullHeader(authorizationHeader);
+      String              number   = header.getNumber();
+      String              password = header.getPassword();
+
+      rateLimiters.getVerifyLimiter().validate(number);
+
+      if (!tokenGenerator.isPresent()) {
+        logger.debug("Attempt to authorize with key but not configured...");
+        throw new WebApplicationException(Response.status(403).build());
+      }
+
+      if (!tokenGenerator.get().isValid(verificationToken, number, timeProvider.getCurrentTimeMillis())) {
+        throw new WebApplicationException(Response.status(403).build());
+      }
+
+      createAccount(number, password, userAgent, accountAttributes);
+    } catch (InvalidAuthorizationHeaderException e) {
+      logger.info("Bad authorization header", e);
+      throw new WebApplicationException(Response.status(401).build());
+    }
+  }
+
+  @Timed
+  @GET
+  @Path("/token/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public AuthorizationToken verifyToken(@Auth Account account)
+          throws RateLimitExceededException
+  {
+    if (!tokenGenerator.isPresent()) {
+      logger.debug("Attempt to authorize with key but not configured...");
+      throw new WebApplicationException(Response.status(404).build());
+    }
+
+    return tokenGenerator.get().generateFor(account.getNumber());
   }
 
   @Timed

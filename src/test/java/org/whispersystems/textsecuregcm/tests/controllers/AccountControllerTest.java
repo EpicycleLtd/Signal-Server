@@ -66,6 +66,8 @@ public class AccountControllerTest {
                                                                                                rateLimiters,
                                                                                                smsSender,
                                                                                                storedMessages,
+                                                                                               null,
+                                                                                               Optional.absent(),
                                                                                                turnTokenGenerator,
                                                                                                new HashMap<>()))
                                                             .build();

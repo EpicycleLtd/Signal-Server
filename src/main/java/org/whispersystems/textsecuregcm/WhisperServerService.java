@@ -43,6 +43,7 @@ import org.whispersystems.textsecuregcm.controllers.KeysController;
 import org.whispersystems.textsecuregcm.controllers.MessageController;
 import org.whispersystems.textsecuregcm.controllers.ProfileController;
 import org.whispersystems.textsecuregcm.controllers.ProvisioningController;
+import org.whispersystems.textsecuregcm.controllers.ReceiptController;
 import org.whispersystems.textsecuregcm.federation.FederatedClientManager;
 import org.whispersystems.textsecuregcm.federation.FederatedPeer;
 import org.whispersystems.textsecuregcm.limits.RateLimiters;
@@ -58,6 +59,7 @@ import org.whispersystems.textsecuregcm.metrics.NetworkReceivedGauge;
 import org.whispersystems.textsecuregcm.metrics.NetworkSentGauge;
 import org.whispersystems.textsecuregcm.providers.RedisClientFactory;
 import org.whispersystems.textsecuregcm.providers.RedisHealthCheck;
+import org.whispersystems.textsecuregcm.providers.TimeProvider;
 import org.whispersystems.textsecuregcm.push.APNSender;
 import org.whispersystems.textsecuregcm.push.ApnFallbackManager;
 import org.whispersystems.textsecuregcm.push.GCMSender;
@@ -185,6 +187,7 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
     PushSender               pushSender          = new PushSender(apnFallbackManager, gcmSender, apnSender, websocketSender, config.getPushConfiguration().getQueueSize());
     ReceiptSender            receiptSender       = new ReceiptSender(accountsManager, pushSender, federatedClientManager);
     TurnTokenGenerator       turnTokenGenerator  = new TurnTokenGenerator(config.getTurnConfiguration());
+    Optional<byte[]>         authorizationKey    = config.getRedphoneConfiguration().getAuthorizationKey();
 
     apnSender.setApnFallbackManager(apnFallbackManager);
     environment.lifecycle().manage(apnFallbackManager);
@@ -206,11 +209,12 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
                                                              .buildAuthFilter()));
     environment.jersey().register(new AuthValueFactoryProvider.Binder());
 
-    environment.jersey().register(new AccountController(pendingAccountsManager, accountsManager, rateLimiters, smsSender, messagesManager, turnTokenGenerator, config.getTestDevices()));
+    environment.jersey().register(new AccountController(pendingAccountsManager, accountsManager, rateLimiters, smsSender, messagesManager, new TimeProvider(), authorizationKey, turnTokenGenerator, config.getTestDevices()));
     environment.jersey().register(new DeviceController(pendingDevicesManager, accountsManager, messagesManager, rateLimiters, config.getMaxDevices()));
     environment.jersey().register(new DirectoryController(rateLimiters, directory));
     environment.jersey().register(new FederationControllerV1(accountsManager, attachmentController, messageController));
     environment.jersey().register(new FederationControllerV2(accountsManager, attachmentController, messageController, keysController));
+    environment.jersey().register(new ReceiptController(receiptSender));
     environment.jersey().register(new ProvisioningController(rateLimiters, pushSender));
     environment.jersey().register(attachmentController);
     environment.jersey().register(keysController);

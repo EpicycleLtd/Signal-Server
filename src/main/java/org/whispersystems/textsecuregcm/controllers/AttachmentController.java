@@ -70,7 +70,7 @@ public class AttachmentController {
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   public AttachmentDescriptor allocateAttachment(@Auth Account account)
-      throws RateLimitExceededException
+      throws RateLimitExceededException, IOException
   {
     if (account.isRateLimited()) {
       rateLimiters.getAttachmentLimiter().validate(account.getNumber());

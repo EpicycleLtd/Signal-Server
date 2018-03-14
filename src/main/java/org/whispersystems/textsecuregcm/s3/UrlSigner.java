@@ -24,36 +24,52 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import org.whispersystems.textsecuregcm.configuration.AttachmentsConfiguration;
+import org.whispersystems.textsecuregcm.minio.MinioClient;
 
+import java.io.IOException;
 import java.net.URL;
 import java.util.Date;
 
 public class UrlSigner {
 
   private static final long   DURATION = 60 * 60 * 1000;
+  private static final int    DURATION_MINUTES = 60 * 60;
 
   private final AWSCredentials credentials;
   private final String bucket;
+  //
+  private final String accessKey;
+  private final String accessSecret;
+  private final String providerUrl;
 
   public UrlSigner(AttachmentsConfiguration config) {
     this.credentials = new BasicAWSCredentials(config.getAccessKey(), config.getAccessSecret());
     this.bucket      = config.getBucket();
+    this.accessKey    = config.getAccessKey();
+    this.accessSecret = config.getAccessSecret();
+    this.providerUrl  = config.getProviderUrl();
+
   }
 
-  public URL getPreSignedUrl(long attachmentId, HttpMethod method, boolean unaccelerated) {
-    AmazonS3                    client  = new AmazonS3Client(credentials);
-    GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucket, String.valueOf(attachmentId), method);
-    
-    request.setExpiration(new Date(System.currentTimeMillis() + DURATION));
-    request.setContentType("application/octet-stream");
+  public URL getPreSignedUrl(long attachmentId, HttpMethod method, boolean unaccelerated) throws IOException {
+    if(this.providerUrl == null || this.providerUrl.isEmpty()) {
+      AmazonS3 client = new AmazonS3Client(credentials);
+      GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(
+        bucket, String.valueOf(attachmentId), method
+      );
+      request.setExpiration(new Date(System.currentTimeMillis() + DURATION));
+      request.setContentType("application/octet-stream");
 
-    if (unaccelerated) {
-      client.setS3ClientOptions(S3ClientOptions.builder().setPathStyleAccess(true).build());
+      if (unaccelerated) {
+        client.setS3ClientOptions(S3ClientOptions.builder().setPathStyleAccess(true).build());
+      } else {
+        client.setS3ClientOptions(S3ClientOptions.builder().setAccelerateModeEnabled(true).build());
+      }
+      return client.generatePresignedUrl(request);
     } else {
-      client.setS3ClientOptions(S3ClientOptions.builder().setAccelerateModeEnabled(true).build());
+      MinioClient client = new MinioClient(providerUrl, accessKey, accessSecret);
+      return client.getPreSignedUrlMinio(attachmentId, method, bucket, DURATION_MINUTES);
     }
-
-    return client.generatePresignedUrl(request);
   }
 
 }
