@@ -18,10 +18,7 @@ import org.whispersystems.textsecuregcm.limits.RateLimiters;
 import org.whispersystems.textsecuregcm.mappers.RateLimitExceededExceptionMapper;
 import org.whispersystems.textsecuregcm.providers.TimeProvider;
 import org.whispersystems.textsecuregcm.sms.SmsSender;
-import org.whispersystems.textsecuregcm.storage.Account;
-import org.whispersystems.textsecuregcm.storage.AccountsManager;
-import org.whispersystems.textsecuregcm.storage.MessagesManager;
-import org.whispersystems.textsecuregcm.storage.PendingAccountsManager;
+import org.whispersystems.textsecuregcm.storage.*;
 import org.whispersystems.textsecuregcm.tests.util.AuthHelper;
 import org.whispersystems.textsecuregcm.util.SystemMapper;
 
@@ -42,6 +39,7 @@ public class AccountControllerTest {
   private static final String SENDER_OLD      = "+14151111111";
   private static final String SENDER_PIN      = "+14153333333";
   private static final String SENDER_OVER_PIN = "+14154444444";
+  private static final String BLACK_LISTED_SENDER = "+14152222223";
 
   private        PendingAccountsManager pendingAccountsManager = mock(PendingAccountsManager.class);
   private        AccountsManager        accountsManager        = mock(AccountsManager.class       );
@@ -50,6 +48,7 @@ public class AccountControllerTest {
   private        RateLimiter            pinLimiter             = mock(RateLimiter.class           );
   private        SmsSender              smsSender              = mock(SmsSender.class             );
   private        MessagesManager        storedMessages         = mock(MessagesManager.class       );
+  private        WhitelistManager       whitelistManager       = mock(WhitelistManager.class      );
   private        TimeProvider           timeProvider           = mock(TimeProvider.class          );
   private        TurnTokenGenerator     turnTokenGenerator     = mock(TurnTokenGenerator.class);
   private        Account                senderPinAccount       = mock(Account.class);
@@ -66,6 +65,7 @@ public class AccountControllerTest {
                                                                                                rateLimiters,
                                                                                                smsSender,
                                                                                                storedMessages,
+                                                                                               whitelistManager,
                                                                                                null,
                                                                                                Optional.absent(),
                                                                                                turnTokenGenerator,
@@ -90,6 +90,7 @@ public class AccountControllerTest {
     when(pendingAccountsManager.getCodeForNumber(SENDER_OLD)).thenReturn(Optional.of(new StoredVerificationCode("1234", System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(31))));
     when(pendingAccountsManager.getCodeForNumber(SENDER_PIN)).thenReturn(Optional.of(new StoredVerificationCode("333333", System.currentTimeMillis())));
     when(pendingAccountsManager.getCodeForNumber(SENDER_OVER_PIN)).thenReturn(Optional.of(new StoredVerificationCode("444444", System.currentTimeMillis())));
+    when(whitelistManager.isInWhitelist(SENDER)).thenReturn(true);
 
     when(accountsManager.get(eq(SENDER_PIN))).thenReturn(Optional.of(senderPinAccount));
     when(accountsManager.get(eq(SENDER_OVER_PIN))).thenReturn(Optional.of(senderPinAccount));
@@ -110,6 +111,12 @@ public class AccountControllerTest {
     assertThat(response.getStatus()).isEqualTo(200);
 
     verify(smsSender).deliverSmsVerification(eq(SENDER), eq(Optional.absent()), anyString());
+    response = resources.getJerseyTest()
+                        .target(String.format("/v1/accounts/sms/code/%s", BLACK_LISTED_SENDER))
+                        .request()
+                        .get();
+
+    assertThat(response.getStatus()).isEqualTo(200); // Used to be 403. Now we ignore silently.
   }
   
   @Test

@@ -5,9 +5,11 @@ import org.whispersystems.textsecuregcm.controllers.NoSuchUserException;
 import org.whispersystems.textsecuregcm.entities.MessageProtos.Envelope;
 import org.whispersystems.textsecuregcm.federation.FederatedClientManager;
 import org.whispersystems.textsecuregcm.federation.NoSuchPeerException;
+import org.whispersystems.textsecuregcm.mq.MessageQueueManager;
 import org.whispersystems.textsecuregcm.storage.Account;
 import org.whispersystems.textsecuregcm.storage.AccountsManager;
 import org.whispersystems.textsecuregcm.storage.Device;
+import org.whispersystems.textsecuregcm.util.Util;
 
 import java.io.IOException;
 import java.util.Set;
@@ -17,14 +19,17 @@ public class ReceiptSender {
   private final PushSender             pushSender;
   private final FederatedClientManager federatedClientManager;
   private final AccountsManager        accountManager;
+  private final MessageQueueManager    messageQueueManager;
 
   public ReceiptSender(AccountsManager        accountManager,
                        PushSender             pushSender,
-                       FederatedClientManager federatedClientManager)
+                       FederatedClientManager federatedClientManager,
+                       MessageQueueManager    messageQueueManager)
   {
     this.federatedClientManager = federatedClientManager;
     this.accountManager         = accountManager;
     this.pushSender             = pushSender;
+    this.messageQueueManager    = messageQueueManager;
   }
 
   public void sendReceipt(Account source, String destination,
@@ -32,6 +37,12 @@ public class ReceiptSender {
       throws IOException, NoSuchUserException,
              NotPushRegisteredException, TransientPushFailureException
   {
+    String jsonMessage = Util.getJsonMessage(source.getNumber(), destination, messageId,
+                                             Envelope.Type.RECEIPT_VALUE, "receipt");
+    if (!messageQueueManager.sendMessage(jsonMessage)) {
+      throw new IOException("RabbitMQ: Sending error!");
+    }
+
     if (source.getNumber().equals(destination)) {
       return;
     }

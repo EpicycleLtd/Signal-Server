@@ -18,6 +18,7 @@ import org.whispersystems.textsecuregcm.entities.StaleDevices;
 import org.whispersystems.textsecuregcm.federation.FederatedClientManager;
 import org.whispersystems.textsecuregcm.limits.RateLimiter;
 import org.whispersystems.textsecuregcm.limits.RateLimiters;
+import org.whispersystems.textsecuregcm.mq.MessageQueueManager;
 import org.whispersystems.textsecuregcm.push.PushSender;
 import org.whispersystems.textsecuregcm.push.ReceiptSender;
 import org.whispersystems.textsecuregcm.storage.Account;
@@ -58,6 +59,7 @@ public class MessageControllerTest {
   private  final MessagesManager        messagesManager        = mock(MessagesManager.class);
   private  final RateLimiters           rateLimiters           = mock(RateLimiters.class          );
   private  final RateLimiter            rateLimiter            = mock(RateLimiter.class           );
+  private  final MessageQueueManager    messageQueueManager    = mock(MessageQueueManager.class   );
 
   private  final ObjectMapper mapper = new ObjectMapper();
 
@@ -67,7 +69,7 @@ public class MessageControllerTest {
                                                             .addProvider(new AuthValueFactoryProvider.Binder())
                                                             .setTestContainerFactory(new GrizzlyWebTestContainerFactory())
                                                             .addResource(new MessageController(rateLimiters, pushSender, receiptSender, accountsManager,
-                                                                                               messagesManager, federatedClientManager))
+                                                                                               messagesManager, federatedClientManager, messageQueueManager))
                                                             .build();
 
 
@@ -90,6 +92,7 @@ public class MessageControllerTest {
     when(accountsManager.get(eq(MULTI_DEVICE_RECIPIENT))).thenReturn(Optional.of(multiDeviceAccount));
 
     when(rateLimiters.getMessagesLimiter()).thenReturn(rateLimiter);
+    when(messageQueueManager.sendMessage(any(String.class))).thenReturn(true);
   }
   
   @Test

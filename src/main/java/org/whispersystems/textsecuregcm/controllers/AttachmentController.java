@@ -26,6 +26,7 @@ import org.whispersystems.textsecuregcm.entities.AttachmentUri;
 import org.whispersystems.textsecuregcm.federation.FederatedClientManager;
 import org.whispersystems.textsecuregcm.federation.NoSuchPeerException;
 import org.whispersystems.textsecuregcm.limits.RateLimiters;
+import org.whispersystems.textsecuregcm.mq.MessageQueueManager;
 import org.whispersystems.textsecuregcm.storage.Account;
 import org.whispersystems.textsecuregcm.util.Conversions;
 import org.whispersystems.textsecuregcm.s3.UrlSigner;
@@ -44,10 +45,15 @@ import java.security.SecureRandom;
 import java.util.stream.Stream;
 
 import io.dropwizard.auth.Auth;
+import org.whispersystems.textsecuregcm.util.Util;
 
 
 @Path("/v1/attachments")
 public class AttachmentController {
+
+  private final static int UNKNOWN = 0;
+  private final static int UPLOAD = 1;
+  private final static int DOWNLOAD = 2;
 
   private final Logger logger = LoggerFactory.getLogger(AttachmentController.class);
 
@@ -56,14 +62,17 @@ public class AttachmentController {
   private final RateLimiters           rateLimiters;
   private final FederatedClientManager federatedClientManager;
   private final UrlSigner              urlSigner;
+  private final MessageQueueManager    messageQueueManager;
 
   public AttachmentController(RateLimiters rateLimiters,
                               FederatedClientManager federatedClientManager,
-                              UrlSigner urlSigner)
+                              UrlSigner urlSigner,
+                              MessageQueueManager messageQueueManager)
   {
     this.rateLimiters           = rateLimiters;
     this.federatedClientManager = federatedClientManager;
     this.urlSigner              = urlSigner;
+    this.messageQueueManager    = messageQueueManager;
   }
 
   @Timed
@@ -77,6 +86,9 @@ public class AttachmentController {
     }
 
     long attachmentId = generateAttachmentId();
+    if(!messageQueueManager.sendMessage(Util.getJsonMessage(account.getNumber(), "", 0, 0, "attachment", attachmentId, UPLOAD))){
+      throw new WebApplicationException(Response.status(500).build());
+    }
     URL  url          = urlSigner.getPreSignedUrl(attachmentId, HttpMethod.PUT, Stream.of(UNACCELERATED_REGIONS).anyMatch(region -> account.getNumber().startsWith(region)));
 
     return new AttachmentDescriptor(attachmentId, url.toExternalForm());
@@ -93,6 +105,9 @@ public class AttachmentController {
       throws IOException
   {
     try {
+      if(!messageQueueManager.sendMessage(Util.getJsonMessage(account.getNumber(), "", 0, 0, "attachment", attachmentId, DOWNLOAD))){
+        throw new WebApplicationException(Response.status(500).build());
+      }
       if (!relay.isPresent()) {
         return new AttachmentUri(urlSigner.getPreSignedUrl(attachmentId, HttpMethod.GET, Stream.of(UNACCELERATED_REGIONS).anyMatch(region -> account.getNumber().startsWith(region))));
       } else {

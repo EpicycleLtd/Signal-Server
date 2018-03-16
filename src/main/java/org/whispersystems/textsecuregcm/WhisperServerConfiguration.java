@@ -26,6 +26,7 @@ import org.whispersystems.textsecuregcm.configuration.PushConfiguration;
 import org.whispersystems.textsecuregcm.configuration.RateLimitsConfiguration;
 import org.whispersystems.textsecuregcm.configuration.RedPhoneConfiguration;
 import org.whispersystems.textsecuregcm.configuration.RedisConfiguration;
+import org.whispersystems.textsecuregcm.configuration.RabbitConfiguration;
 import org.whispersystems.textsecuregcm.configuration.AttachmentsConfiguration;
 import org.whispersystems.textsecuregcm.configuration.TestDeviceConfiguration;
 import org.whispersystems.textsecuregcm.configuration.TurnConfiguration;
@@ -75,10 +76,20 @@ public class WhisperServerConfiguration extends Configuration {
   @JsonProperty
   private RedisConfiguration directory;
 
+  @NotNull
+  @Valid
+  @JsonProperty
+  private RabbitConfiguration rabbit;
+
   @Valid
   @NotNull
   @JsonProperty
   private DataSourceFactory messageStore;
+
+  @Valid
+  @NotNull
+  @JsonProperty
+  private DataSourceFactory whitelistStore;
 
   @Valid
   @NotNull
@@ -163,8 +174,16 @@ public class WhisperServerConfiguration extends Configuration {
     return directory;
   }
 
+  public RabbitConfiguration getRabbitConfiguration() {
+    return rabbit;
+  }
+
   public DataSourceFactory getMessageStoreConfiguration() {
     return messageStore;
+  }
+
+  public DataSourceFactory getWhitelistStoreConfiguration() {
+    return whitelistStore;
   }
 
   public DataSourceFactory getDataSourceFactory() {

@@ -41,6 +41,8 @@ public class ReceiptController {
             throw new WebApplicationException(Response.Status.NOT_FOUND);
         } catch (TransientPushFailureException e) {
             throw new IOException(e);
+        } catch (IOException e) {
+            throw new WebApplicationException(Response.status(500).build());
         }
     }
 

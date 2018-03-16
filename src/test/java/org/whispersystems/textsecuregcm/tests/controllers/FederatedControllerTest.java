@@ -20,6 +20,7 @@ import org.whispersystems.textsecuregcm.entities.SignedPreKey;
 import org.whispersystems.textsecuregcm.federation.FederatedClientManager;
 import org.whispersystems.textsecuregcm.limits.RateLimiter;
 import org.whispersystems.textsecuregcm.limits.RateLimiters;
+import org.whispersystems.textsecuregcm.mq.MessageQueueManager;
 import org.whispersystems.textsecuregcm.push.PushSender;
 import org.whispersystems.textsecuregcm.push.ReceiptSender;
 import org.whispersystems.textsecuregcm.storage.Account;
@@ -56,13 +57,14 @@ public class FederatedControllerTest {
   private MessagesManager        messagesManager        = mock(MessagesManager.class);
   private RateLimiters           rateLimiters           = mock(RateLimiters.class          );
   private RateLimiter            rateLimiter            = mock(RateLimiter.class           );
+  private MessageQueueManager    messageQueueManager    = mock(MessageQueueManager.class   );
 
   private final SignedPreKey signedPreKey = new SignedPreKey(3333, "foo", "baar");
   private final PreKeyResponse preKeyResponseV2 = new PreKeyResponse("foo", new LinkedList<PreKeyResponseItem>());
 
   private final ObjectMapper mapper = new ObjectMapper();
 
-  private final MessageController messageController = new MessageController(rateLimiters, pushSender, receiptSender, accountsManager, messagesManager, federatedClientManager);
+  private final MessageController messageController = new MessageController(rateLimiters, pushSender, receiptSender, accountsManager, messagesManager, federatedClientManager, messageQueueManager);
   private final KeysController    keysControllerV2  = mock(KeysController.class);
 
   @Rule
@@ -98,6 +100,7 @@ public class FederatedControllerTest {
     when(keysControllerV2.getSignedKey(any(Account.class))).thenReturn(Optional.of(signedPreKey));
     when(keysControllerV2.getDeviceKeys(any(Account.class), anyString(), anyString(), any(Optional.class)))
         .thenReturn(Optional.of(preKeyResponseV2));
+    when(messageQueueManager.sendMessage(any(String.class))).thenReturn(true);
   }
 
   @Test

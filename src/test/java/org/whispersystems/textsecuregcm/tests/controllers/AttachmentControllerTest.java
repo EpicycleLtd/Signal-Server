@@ -11,6 +11,7 @@ import org.whispersystems.textsecuregcm.entities.AttachmentUri;
 import org.whispersystems.textsecuregcm.federation.FederatedClientManager;
 import org.whispersystems.textsecuregcm.limits.RateLimiter;
 import org.whispersystems.textsecuregcm.limits.RateLimiters;
+import org.whispersystems.textsecuregcm.mq.MessageQueueManager;
 import org.whispersystems.textsecuregcm.s3.UrlSigner;
 import org.whispersystems.textsecuregcm.tests.util.AuthHelper;
 import org.whispersystems.textsecuregcm.util.SystemMapper;
@@ -19,6 +20,7 @@ import java.net.MalformedURLException;
 
 import io.dropwizard.testing.junit.ResourceTestRule;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -28,6 +30,7 @@ public class AttachmentControllerTest {
   private static FederatedClientManager   federatedClientManager = mock(FederatedClientManager.class  );
   private static RateLimiters             rateLimiters           = mock(RateLimiters.class            );
   private static RateLimiter              rateLimiter            = mock(RateLimiter.class             );
+  private static MessageQueueManager      messageQueueManager    = mock(MessageQueueManager.class     );
 
   private static UrlSigner urlSigner;
 
@@ -37,6 +40,7 @@ public class AttachmentControllerTest {
     when(configuration.getBucket()).thenReturn("attachment-bucket");
 
     when(rateLimiters.getAttachmentLimiter()).thenReturn(rateLimiter);
+    when(messageQueueManager.sendMessage(any(String.class))).thenReturn(true);
     urlSigner = new UrlSigner(configuration);
   }
 
@@ -46,7 +50,7 @@ public class AttachmentControllerTest {
                                                                    .addProvider(new AuthValueFactoryProvider.Binder())
                                                                    .setMapper(SystemMapper.getMapper())
                                                                    .setTestContainerFactory(new GrizzlyWebTestContainerFactory())
-                                                                   .addResource(new AttachmentController(rateLimiters, federatedClientManager, urlSigner))
+                                                                   .addResource(new AttachmentController(rateLimiters, federatedClientManager, urlSigner, messageQueueManager))
                                                                    .build();
 
   @Test

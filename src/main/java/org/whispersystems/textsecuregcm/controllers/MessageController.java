@@ -33,6 +33,7 @@ import org.whispersystems.textsecuregcm.federation.FederatedClient;
 import org.whispersystems.textsecuregcm.federation.FederatedClientManager;
 import org.whispersystems.textsecuregcm.federation.NoSuchPeerException;
 import org.whispersystems.textsecuregcm.limits.RateLimiters;
+import org.whispersystems.textsecuregcm.mq.MessageQueueManager;
 import org.whispersystems.textsecuregcm.push.NotPushRegisteredException;
 import org.whispersystems.textsecuregcm.push.PushSender;
 import org.whispersystems.textsecuregcm.push.ReceiptSender;
@@ -42,6 +43,7 @@ import org.whispersystems.textsecuregcm.storage.AccountsManager;
 import org.whispersystems.textsecuregcm.storage.Device;
 import org.whispersystems.textsecuregcm.storage.MessagesManager;
 import org.whispersystems.textsecuregcm.util.Base64;
+import org.whispersystems.textsecuregcm.util.SystemMapper;
 import org.whispersystems.textsecuregcm.util.Util;
 import org.whispersystems.textsecuregcm.websocket.WebSocketConnection;
 
@@ -75,13 +77,15 @@ public class MessageController {
   private final FederatedClientManager federatedClientManager;
   private final AccountsManager        accountsManager;
   private final MessagesManager        messagesManager;
+  private final MessageQueueManager    messageQueueManager;
 
   public MessageController(RateLimiters rateLimiters,
                            PushSender pushSender,
                            ReceiptSender receiptSender,
                            AccountsManager accountsManager,
                            MessagesManager messagesManager,
-                           FederatedClientManager federatedClientManager)
+                           FederatedClientManager federatedClientManager,
+                           MessageQueueManager messageQueueManager)
   {
     this.rateLimiters           = rateLimiters;
     this.pushSender             = pushSender;
@@ -89,6 +93,7 @@ public class MessageController {
     this.accountsManager        = accountsManager;
     this.messagesManager        = messagesManager;
     this.federatedClientManager = federatedClientManager;
+    this.messageQueueManager    = messageQueueManager;
   }
 
   @Timed
@@ -105,7 +110,17 @@ public class MessageController {
 
     try {
       boolean isSyncMessage = source.getNumber().equals(destinationName);
-
+      if (!isSyncMessage) {
+        for (IncomingMessage message : messages.getMessages()) {
+          if (!messageQueueManager.sendMessage(Util.getJsonMessage(source.getNumber(),
+                                                                   destinationName,
+                                                                   messages.getTimestamp(),
+                                                                   message.getType(),
+                                                                   "message"))) {
+            throw new WebApplicationException(Response.status(500).build());
+          }
+        }
+      }
       if (Util.isEmpty(messages.getRelay())) sendLocalMessage(source, destinationName, messages, isSyncMessage);
       else                                   sendRelayMessage(source, destinationName, messages, isSyncMessage);
 
@@ -147,9 +162,10 @@ public class MessageController {
     try {
       WebSocketConnection.messageTime.update(System.currentTimeMillis() - timestamp);
 
-      Optional<OutgoingMessageEntity> message = messagesManager.delete(account.getNumber(),
-                                                                       account.getAuthenticatedDevice().get().getId(),
-                                                                       source, timestamp);
+      Optional<OutgoingMessageEntity> message = messagesManager.get(account.getNumber(),
+                                                                    account.getAuthenticatedDevice().get().getId(),
+                                                                    source,
+                                                                    timestamp);
 
       if (message.isPresent() && message.get().getType() != Envelope.Type.RECEIPT_VALUE) {
         receiptSender.sendReceipt(account,
@@ -157,6 +173,7 @@ public class MessageController {
                                   message.get().getTimestamp(),
                                   Optional.fromNullable(message.get().getRelay()));
       }
+      messagesManager.delete(account.getNumber(), account.getAuthenticatedDevice().get().getId(), source, timestamp);
     } catch (NotPushRegisteredException e) {
       logger.info("User no longer push registered for delivery receipt: " + e.getMessage());
     } catch (NoSuchUserException | TransientPushFailureException e) {
