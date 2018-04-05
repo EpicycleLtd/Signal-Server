@@ -155,6 +155,8 @@ public class AccountController {
       smsSender.deliverVoxVerification(number, verificationCode.getVerificationCodeSpeech());
     }
 
+    //Log by Imre
+    logger.info("event=verification_code_sent to=" + number + " code=" + verificationCode.getVerificationCodeDisplay());
     return Response.ok().build();
   }
 
