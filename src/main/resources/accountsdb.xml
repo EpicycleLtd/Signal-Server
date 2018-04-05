@@ -114,13 +114,13 @@
 
     <changeSet id="5" author="moxie">
         <addColumn tableName="pending_accounts">
-            <column name="timestamp" type="bigint" defaultValueComputed="extract(epoch from now()) * 1000">
+            <column name="timestamp" type="bigint" defaultValue="0">
                 <constraints nullable="false"/>
             </column>
         </addColumn>
 
         <addColumn tableName="pending_devices">
-            <column name="timestamp" type="bigint" defaultValueComputed="extract(epoch from now()) * 1000">
+            <column name="timestamp" type="bigint" defaultValue="0">
                 <constraints nullable="false"/>
             </column>
         </addColumn>
