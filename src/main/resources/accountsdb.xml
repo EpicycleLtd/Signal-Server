@@ -114,14 +114,14 @@
 
     <changeSet id="5" author="moxie">
         <addColumn tableName="pending_accounts">
-            <column name="timestamp" type="bigint" defaultValue="0">
-                <constraints nullable="false"/>
+            <column name="timestamp" type="bigint">
+                <constraints nullable="true"/>
             </column>
         </addColumn>
 
         <addColumn tableName="pending_devices">
-            <column name="timestamp" type="bigint" defaultValue="0">
-                <constraints nullable="false"/>
+            <column name="timestamp" type="bigint">
+                <constraints nullable="true"/>
             </column>
         </addColumn>
     </changeSet>
