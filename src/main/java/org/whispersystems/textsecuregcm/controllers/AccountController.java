@@ -126,7 +126,8 @@ public class AccountController {
     }
 
     if (!whitelistManager.isInWhitelist(number)) {
-      return Response.ok().build();
+        logger.info("event=client_not_in_whitelist from=" + number + " transport=" + transport);
+        return Response.status(403).build();
     }
 
     switch (transport) {
