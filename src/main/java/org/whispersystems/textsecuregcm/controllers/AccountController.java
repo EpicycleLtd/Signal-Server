@@ -25,6 +25,7 @@ import com.google.common.base.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.whispersystems.textsecuregcm.auth.*;
+import org.whispersystems.textsecuregcm.configuration.LdapConfigurations;
 import org.whispersystems.textsecuregcm.entities.AccountAttributes;
 import org.whispersystems.textsecuregcm.entities.ApnRegistrationId;
 import org.whispersystems.textsecuregcm.entities.GcmRegistrationId;
@@ -82,6 +83,7 @@ public class AccountController {
   private final WhitelistManager                      whitelistManager;
   private final TimeProvider                          timeProvider;
   private final Optional<AuthorizationTokenGenerator> tokenGenerator;
+  private final Optional<AuthorizationTokenGenerator> ldapTokenGenerator;
   private final TurnTokenGenerator                    turnTokenGenerator;
   private final Map<String, Integer>                  testDevices;
 
@@ -94,7 +96,8 @@ public class AccountController {
                            TimeProvider timeProvider,
                            Optional<byte[]> authorizationKey,
                            TurnTokenGenerator turnTokenGenerator,
-                           Map<String, Integer> testDevices)
+                           Map<String, Integer> testDevices,
+                           Optional<byte[]> ldapAuthKey)
   {
     this.pendingAccounts    = pendingAccounts;
     this.accounts           = accounts;
@@ -105,11 +108,12 @@ public class AccountController {
     this.timeProvider       = timeProvider;
     this.testDevices        = testDevices;
     this.turnTokenGenerator = turnTokenGenerator;
-    if (authorizationKey.isPresent()) {
-      tokenGenerator = Optional.of(new AuthorizationTokenGenerator(authorizationKey.get()));
-    } else {
-      tokenGenerator = Optional.absent();
-    }
+    tokenGenerator          = authorizationKey.isPresent()
+                            ? Optional.of(new AuthorizationTokenGenerator(authorizationKey.get()))
+                            : Optional.absent();
+    ldapTokenGenerator      = ldapAuthKey.isPresent()
+                            ? Optional.of(new AuthorizationTokenGenerator(ldapAuthKey.get()))
+                            : Optional.absent();
   }
 
   @Timed
@@ -259,6 +263,19 @@ public class AccountController {
     }
 
     return tokenGenerator.get().generateFor(account.getNumber());
+  }
+
+  @Timed
+  @GET
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  @Path("/token/ldap/")
+  public AuthorizationToken getLdapData(@Auth Account account) {
+    if (!ldapTokenGenerator.isPresent()) {
+      logger.debug("Attempt to authorize ldap with key but not configured...");
+      throw new WebApplicationException(Response.status(404).build());
+    }
+    return ldapTokenGenerator.get().generateFor(account.getNumber());
   }
 
   @Timed

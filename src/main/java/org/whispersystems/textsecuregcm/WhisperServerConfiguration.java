@@ -20,6 +20,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.whispersystems.textsecuregcm.configuration.ApnConfiguration;
 import org.whispersystems.textsecuregcm.configuration.FederationConfiguration;
 import org.whispersystems.textsecuregcm.configuration.GcmConfiguration;
+import org.whispersystems.textsecuregcm.configuration.LdapConfigurations;
 import org.whispersystems.textsecuregcm.configuration.MaxDeviceConfiguration;
 import org.whispersystems.textsecuregcm.configuration.ProfilesConfiguration;
 import org.whispersystems.textsecuregcm.configuration.PushConfiguration;
@@ -121,6 +122,9 @@ public class WhisperServerConfiguration extends Configuration {
   @JsonProperty
   private RedPhoneConfiguration redphone = new RedPhoneConfiguration();
 
+  @JsonProperty
+  private LdapConfigurations ldap = new LdapConfigurations();
+
   @Valid
   @NotNull
   @JsonProperty
@@ -204,6 +208,10 @@ public class WhisperServerConfiguration extends Configuration {
 
   public RedPhoneConfiguration getRedphoneConfiguration() {
     return redphone;
+  }
+
+  public LdapConfigurations getLdapConfiguration() {
+    return ldap;
   }
 
   public TurnConfiguration getTurnConfiguration() {
