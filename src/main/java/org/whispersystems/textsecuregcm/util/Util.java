@@ -150,7 +150,38 @@ public class Util {
                                       long timestamp,
                                       int type,
                                       String controller) throws JsonProcessingException {
-    return getJsonMessage(number, destination, timestamp, type, controller, 0, 0);
+    return getJsonMessage(number, destination, timestamp, type, controller, System.currentTimeMillis());
+  }
+
+  public static String getJsonMessage(String number,
+                                      String destination,
+                                      long timestamp,
+                                      int type,
+                                      String controller,
+                                      long when) throws JsonProcessingException {
+    return getJsonMessage(number, destination, timestamp, type, controller, 0, 0, when);
+  }
+
+  public static String getJsonMessage(String number,
+                                      String destination,
+                                      long timestamp,
+                                      int type,
+                                      String controller,
+                                      long attachmentId,
+                                      int attachmentDir,
+                                      long when) throws JsonProcessingException {
+
+    Map<String, String> map = new HashMap<>();
+    map.put("source", number);
+    map.put("destination", destination);
+    map.put("timestamp", String.valueOf(timestamp));
+    map.put("type", String.valueOf(type));
+    map.put("epoch", String.valueOf(when));
+    map.put("controller", controller);
+    map.put("attachmentId", String.valueOf(attachmentId));
+    map.put("attachmentDir", String.valueOf(attachmentDir));
+
+    return SystemMapper.getMapper().writeValueAsString(map);
   }
 
   public static String getJsonMessage(String number,

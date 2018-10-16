@@ -80,4 +80,8 @@ public class IncomingMessage {
   public boolean isSilent() {
     return silent;
   }
+
+  public long getTimestamp() {
+    return timestamp;
+  }
 }

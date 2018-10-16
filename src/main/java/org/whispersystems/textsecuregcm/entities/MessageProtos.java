@@ -106,6 +106,26 @@ public final class MessageProtos {
      * </pre>
      */
     com.google.protobuf.ByteString getContent();
+
+    // optional uint64 deliveryTimestamp = 9;
+    /**
+     * <code>optional uint64 deliveryTimestamp = 9;</code>
+     */
+    boolean hasDeliveryTimestamp();
+    /**
+     * <code>optional uint64 deliveryTimestamp = 9;</code>
+     */
+    long getDeliveryTimestamp();
+
+    // optional bool read = 50 [default = false];
+    /**
+     * <code>optional bool read = 50 [default = false];</code>
+     */
+    boolean hasRead();
+    /**
+     * <code>optional bool read = 50 [default = false];</code>
+     */
+    boolean getRead();
   }
   /**
    * Protobuf type {@code textsecure.Envelope}
@@ -199,6 +219,16 @@ public final class MessageProtos {
               content_ = input.readBytes();
               break;
             }
+            case 72: {
+              bitField0_ |= 0x00000080;
+              deliveryTimestamp_ = input.readUInt64();
+              break;
+            }
+            case 400: {
+              bitField0_ |= 0x00000100;
+              read_ = input.readBool();
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -263,6 +293,10 @@ public final class MessageProtos {
        * <code>RECEIPT = 5;</code>
        */
       RECEIPT(4, 5),
+      /**
+       * <code>READ = 6;</code>
+       */
+      READ(5, 6),
       ;
 
       /**
@@ -285,6 +319,10 @@ public final class MessageProtos {
        * <code>RECEIPT = 5;</code>
        */
       public static final int RECEIPT_VALUE = 5;
+      /**
+       * <code>READ = 6;</code>
+       */
+      public static final int READ_VALUE = 6;
 
 
       public final int getNumber() { return value; }
@@ -296,6 +334,7 @@ public final class MessageProtos {
           case 2: return KEY_EXCHANGE;
           case 3: return PREKEY_BUNDLE;
           case 5: return RECEIPT;
+          case 6: return READ;
           default: return null;
         }
       }
@@ -530,6 +569,38 @@ public final class MessageProtos {
       return content_;
     }
 
+    // optional uint64 deliveryTimestamp = 9;
+    public static final int DELIVERYTIMESTAMP_FIELD_NUMBER = 9;
+    private long deliveryTimestamp_;
+    /**
+     * <code>optional uint64 deliveryTimestamp = 9;</code>
+     */
+    public boolean hasDeliveryTimestamp() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    /**
+     * <code>optional uint64 deliveryTimestamp = 9;</code>
+     */
+    public long getDeliveryTimestamp() {
+      return deliveryTimestamp_;
+    }
+
+    // optional bool read = 50 [default = false];
+    public static final int READ_FIELD_NUMBER = 50;
+    private boolean read_;
+    /**
+     * <code>optional bool read = 50 [default = false];</code>
+     */
+    public boolean hasRead() {
+      return ((bitField0_ & 0x00000100) == 0x00000100);
+    }
+    /**
+     * <code>optional bool read = 50 [default = false];</code>
+     */
+    public boolean getRead() {
+      return read_;
+    }
+
     private void initFields() {
       type_ = org.whispersystems.textsecuregcm.entities.MessageProtos.Envelope.Type.UNKNOWN;
       source_ = "";
@@ -538,6 +609,8 @@ public final class MessageProtos {
       timestamp_ = 0L;
       legacyMessage_ = com.google.protobuf.ByteString.EMPTY;
       content_ = com.google.protobuf.ByteString.EMPTY;
+      deliveryTimestamp_ = 0L;
+      read_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -571,6 +644,12 @@ public final class MessageProtos {
       }
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         output.writeBytes(8, content_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeUInt64(9, deliveryTimestamp_);
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        output.writeBool(50, read_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -608,6 +687,14 @@ public final class MessageProtos {
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(8, content_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(9, deliveryTimestamp_);
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(50, read_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -739,6 +826,10 @@ public final class MessageProtos {
         bitField0_ = (bitField0_ & ~0x00000020);
         content_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000040);
+        deliveryTimestamp_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000080);
+        read_ = false;
+        bitField0_ = (bitField0_ & ~0x00000100);
         return this;
       }
 
@@ -795,6 +886,14 @@ public final class MessageProtos {
           to_bitField0_ |= 0x00000040;
         }
         result.content_ = content_;
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        result.deliveryTimestamp_ = deliveryTimestamp_;
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+          to_bitField0_ |= 0x00000100;
+        }
+        result.read_ = read_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -835,6 +934,12 @@ public final class MessageProtos {
         }
         if (other.hasContent()) {
           setContent(other.getContent());
+        }
+        if (other.hasDeliveryTimestamp()) {
+          setDeliveryTimestamp(other.getDeliveryTimestamp());
+        }
+        if (other.hasRead()) {
+          setRead(other.getRead());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1213,6 +1318,72 @@ public final class MessageProtos {
       public Builder clearContent() {
         bitField0_ = (bitField0_ & ~0x00000040);
         content_ = getDefaultInstance().getContent();
+        onChanged();
+        return this;
+      }
+
+      // optional uint64 deliveryTimestamp = 9;
+      private long deliveryTimestamp_ ;
+      /**
+       * <code>optional uint64 deliveryTimestamp = 9;</code>
+       */
+      public boolean hasDeliveryTimestamp() {
+        return ((bitField0_ & 0x00000080) == 0x00000080);
+      }
+      /**
+       * <code>optional uint64 deliveryTimestamp = 9;</code>
+       */
+      public long getDeliveryTimestamp() {
+        return deliveryTimestamp_;
+      }
+      /**
+       * <code>optional uint64 deliveryTimestamp = 9;</code>
+       */
+      public Builder setDeliveryTimestamp(long value) {
+        bitField0_ |= 0x00000080;
+        deliveryTimestamp_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint64 deliveryTimestamp = 9;</code>
+       */
+      public Builder clearDeliveryTimestamp() {
+        bitField0_ = (bitField0_ & ~0x00000080);
+        deliveryTimestamp_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // optional bool read = 50 [default = false];
+      private boolean read_ ;
+      /**
+       * <code>optional bool read = 50 [default = false];</code>
+       */
+      public boolean hasRead() {
+        return ((bitField0_ & 0x00000100) == 0x00000100);
+      }
+      /**
+       * <code>optional bool read = 50 [default = false];</code>
+       */
+      public boolean getRead() {
+        return read_;
+      }
+      /**
+       * <code>optional bool read = 50 [default = false];</code>
+       */
+      public Builder setRead(boolean value) {
+        bitField0_ |= 0x00000100;
+        read_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool read = 50 [default = false];</code>
+       */
+      public Builder clearRead() {
+        bitField0_ = (bitField0_ & ~0x00000100);
+        read_ = false;
         onChanged();
         return this;
       }
@@ -1718,16 +1889,17 @@ public final class MessageProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\020TextSecure.proto\022\ntextsecure\"\372\001\n\010Envel" +
+      "\n\020TextSecure.proto\022\ntextsecure\"\264\002\n\010Envel" +
       "ope\022\'\n\004type\030\001 \001(\0162\031.textsecure.Envelope." +
       "Type\022\016\n\006source\030\002 \001(\t\022\024\n\014sourceDevice\030\007 \001" +
       "(\r\022\r\n\005relay\030\003 \001(\t\022\021\n\ttimestamp\030\005 \001(\004\022\025\n\r" +
-      "legacyMessage\030\006 \001(\014\022\017\n\007content\030\010 \001(\014\"U\n\004" +
-      "Type\022\013\n\007UNKNOWN\020\000\022\016\n\nCIPHERTEXT\020\001\022\020\n\014KEY" +
-      "_EXCHANGE\020\002\022\021\n\rPREKEY_BUNDLE\020\003\022\013\n\007RECEIP" +
-      "T\020\005\" \n\020ProvisioningUuid\022\014\n\004uuid\030\001 \001(\tB:\n" +
-      ")org.whispersystems.textsecuregcm.entiti" +
-      "esB\rMessageProtos"
+      "legacyMessage\030\006 \001(\014\022\017\n\007content\030\010 \001(\014\022\031\n\021" +
+      "deliveryTimestamp\030\t \001(\004\022\023\n\004read\0302 \001(\010:\005f" +
+      "alse\"_\n\004Type\022\013\n\007UNKNOWN\020\000\022\016\n\nCIPHERTEXT\020" +
+      "\001\022\020\n\014KEY_EXCHANGE\020\002\022\021\n\rPREKEY_BUNDLE\020\003\022\013" +
+      "\n\007RECEIPT\020\005\022\010\n\004READ\020\006\" \n\020ProvisioningUui" +
+      "d\022\014\n\004uuid\030\001 \001(\tB:\n)org.whispersystems.te",
+      "xtsecuregcm.entitiesB\rMessageProtos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -1739,7 +1911,7 @@ public final class MessageProtos {
           internal_static_textsecure_Envelope_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_textsecure_Envelope_descriptor,
-              new java.lang.String[] { "Type", "Source", "SourceDevice", "Relay", "Timestamp", "LegacyMessage", "Content", });
+              new java.lang.String[] { "Type", "Source", "SourceDevice", "Relay", "Timestamp", "LegacyMessage", "Content", "DeliveryTimestamp", "Read", });
           internal_static_textsecure_ProvisioningUuid_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_textsecure_ProvisioningUuid_fieldAccessorTable = new

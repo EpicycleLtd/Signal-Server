@@ -29,6 +29,9 @@ public class OutgoingMessageEntity {
   @JsonProperty
   private byte[] content;
 
+  @JsonProperty
+  private boolean read;
+
   public OutgoingMessageEntity() {}
 
   public OutgoingMessageEntity(long id, int type, String relay, long timestamp,
@@ -77,4 +80,7 @@ public class OutgoingMessageEntity {
     return id;
   }
 
+  public boolean getRead() {
+    return read;
+  }
 }

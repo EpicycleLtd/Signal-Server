@@ -37,6 +37,7 @@ public abstract class Messages {
   private static final String DESTINATION_DEVICE = "destination_device";
   private static final String MESSAGE            = "message";
   private static final String CONTENT            = "content";
+  private static final String READ               = "read";
 
   @SqlQuery("INSERT INTO messages (" + TYPE + ", " + RELAY + ", " + TIMESTAMP + ", " + SOURCE + ", " + SOURCE_DEVICE + ", " + DESTINATION + ", " + DESTINATION_DEVICE + ", " + MESSAGE + ", " + CONTENT + ") " +
             "VALUES (:type, :relay, :timestamp, :source, :source_device, :destination, :destination_device, :message, :content) " +
@@ -137,6 +138,7 @@ public abstract class Messages {
             sql.bind(SOURCE_DEVICE, message.getSourceDevice());
             sql.bind(MESSAGE, message.hasLegacyMessage() ? message.getLegacyMessage().toByteArray() : null);
             sql.bind(CONTENT, message.hasContent() ? message.getContent().toByteArray() : null);
+            sql.bind(READ, message.hasRead());
           }
         };
       }

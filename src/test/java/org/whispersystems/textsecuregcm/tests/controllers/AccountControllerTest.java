@@ -6,6 +6,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.whispersystems.dropwizard.simpleauth.AuthValueFactoryProvider;
+import org.whispersystems.textsecuregcm.auth.AuthorizationTokenGenerator;
 import org.whispersystems.textsecuregcm.auth.StoredVerificationCode;
 import org.whispersystems.textsecuregcm.auth.TurnTokenGenerator;
 import org.whispersystems.textsecuregcm.controllers.AccountController;
@@ -69,7 +70,8 @@ public class AccountControllerTest {
                                                                                                null,
                                                                                                Optional.absent(),
                                                                                                turnTokenGenerator,
-                                                                                               new HashMap<>()))
+                                                                                               new HashMap<>(),
+                                                                                               Optional.absent()))
                                                             .build();
 
 

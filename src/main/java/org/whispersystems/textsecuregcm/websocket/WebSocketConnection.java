@@ -125,9 +125,9 @@ public class WebSocketConnection implements DispatchChannel {
           }
 
           if (isSuccessResponse(response)) {
-            if (storedMessageId.isPresent()) messagesManager.delete(account.getNumber(), storedMessageId.get());
-            if (!isReceipt)                  sendDeliveryReceiptFor(message);
-            if (requery)                     processStoredMessages();
+            if (storedMessageId.isPresent())      messagesManager.delete(account.getNumber(), storedMessageId.get());
+            if (!isReceipt && !message.getRead()) sendDeliveryReceiptFor(message);
+            if (requery)                          processStoredMessages();
           } else if (!isSuccessResponse(response) && !storedMessageId.isPresent()) {
             requeueMessage(message);
           }
@@ -195,6 +195,8 @@ public class WebSocketConnection implements DispatchChannel {
       if (message.getRelay() != null && !message.getRelay().isEmpty()) {
         builder.setRelay(message.getRelay());
       }
+
+      builder.setRead(message.getRead());
 
       sendMessage(builder.build(), Optional.of(message.getId()), !iterator.hasNext() && messages.hasMore());
     }

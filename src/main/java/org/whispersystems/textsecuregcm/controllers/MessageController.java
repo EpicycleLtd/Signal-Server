@@ -144,6 +144,54 @@ public class MessageController {
   }
 
   @Timed
+  @Path("/read/{destination}")
+  @PUT
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  public SendMessageResponse sendReadMessage(@Auth                     Account source,
+                                             @PathParam("destination") String destinationName,
+                                             @Valid                    IncomingMessageList messages)
+      throws IOException, RateLimitExceededException
+  {
+    rateLimiters.getMessagesLimiter().validate(source.getNumber() + "__" + destinationName);
+
+    try {
+      boolean isSyncMessage = source.getNumber().equals(destinationName);
+      if (!isSyncMessage) {
+        for (IncomingMessage message : messages.getMessages()) {
+          if (!messageQueueManager.sendMessage(Util.getJsonMessage(source.getNumber(),
+                                                                   destinationName,
+                                                                   message.getTimestamp(),
+                                                                   Envelope.Type.READ_VALUE,
+                                                                   "read",
+                                                                   messages.getTimestamp()))) {
+            throw new WebApplicationException(Response.status(500).build());
+          }
+        }
+      }
+      if (Util.isEmpty(messages.getRelay())) sendLocalMessage(source, destinationName, messages, isSyncMessage, true);
+      else                                   sendRelayMessage(source, destinationName, messages, isSyncMessage, true);
+
+      return new SendMessageResponse(!isSyncMessage && source.getActiveDeviceCount() > 1);
+    } catch (NoSuchUserException e) {
+      throw new WebApplicationException(Response.status(404).build());
+    } catch (MismatchedDevicesException e) {
+      throw new WebApplicationException(Response.status(409)
+                                                .type(MediaType.APPLICATION_JSON_TYPE)
+                                                .entity(new MismatchedDevices(e.getMissingDevices(),
+                                                                              e.getExtraDevices()))
+                                                .build());
+    } catch (StaleDevicesException e) {
+      throw new WebApplicationException(Response.status(410)
+                                                .type(MediaType.APPLICATION_JSON)
+                                                .entity(new StaleDevices(e.getStaleDevices()))
+                                                .build());
+    } catch (InvalidDestinationException e) {
+      throw new WebApplicationException(Response.status(400).build());
+    }
+  }
+
+  @Timed
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   public OutgoingMessageEntityList getPendingMessages(@Auth Account account) {
@@ -166,8 +214,8 @@ public class MessageController {
                                                                     account.getAuthenticatedDevice().get().getId(),
                                                                     source,
                                                                     timestamp);
-
-      if (message.isPresent() && message.get().getType() != Envelope.Type.RECEIPT_VALUE) {
+      if (message.isPresent() && (message.get().getType() != Envelope.Type.RECEIPT_VALUE &&
+                                  !message.get().getRead())) {
         receiptSender.sendReceipt(account,
                                   message.get().getSource(),
                                   message.get().getTimestamp(),
@@ -188,6 +236,16 @@ public class MessageController {
                                 boolean isSyncMessage)
       throws NoSuchUserException, MismatchedDevicesException, StaleDevicesException
   {
+    sendLocalMessage(source, destinationName, messages, isSyncMessage, false);
+  }
+
+  private void sendLocalMessage(Account source,
+                                String destinationName,
+                                IncomingMessageList messages,
+                                boolean isSyncMessage,
+                                boolean read)
+      throws NoSuchUserException, MismatchedDevicesException, StaleDevicesException
+  {
     Account destination;
 
     if (!isSyncMessage) destination = getDestinationAccount(destinationName);
@@ -200,7 +258,7 @@ public class MessageController {
       Optional<Device> destinationDevice = destination.getDevice(incomingMessage.getDestinationDeviceId());
 
       if (destinationDevice.isPresent()) {
-        sendLocalMessage(source, destination, destinationDevice.get(), messages.getTimestamp(), incomingMessage);
+        sendLocalMessage(source, destination, destinationDevice.get(), messages.getTimestamp(), incomingMessage, read);
       }
     }
   }
@@ -210,6 +268,17 @@ public class MessageController {
                                 Device destinationDevice,
                                 long timestamp,
                                 IncomingMessage incomingMessage)
+      throws NoSuchUserException
+  {
+    sendLocalMessage(source, destinationAccount, destinationDevice, timestamp, incomingMessage, false);
+  }
+
+  private void sendLocalMessage(Account source,
+                                Account destinationAccount,
+                                Device destinationDevice,
+                                long timestamp,
+                                IncomingMessage incomingMessage,
+                                boolean read)
       throws NoSuchUserException
   {
     try {
@@ -234,6 +303,8 @@ public class MessageController {
         messageBuilder.setRelay(source.getRelay().get());
       }
 
+      messageBuilder.setRead(read);
+
       pushSender.sendMessage(destinationAccount, destinationDevice, messageBuilder.build(), incomingMessage.isSilent());
     } catch (NotPushRegisteredException e) {
       if (destinationDevice.isMaster()) throw new NoSuchUserException(e);
@@ -247,12 +318,22 @@ public class MessageController {
                                 boolean isSyncMessage)
       throws IOException, NoSuchUserException, InvalidDestinationException
   {
+    sendRelayMessage(source, destinationName, messages, isSyncMessage, false);
+  }
+
+  private void sendRelayMessage(Account source,
+                                String destinationName,
+                                IncomingMessageList messages,
+                                boolean isSyncMessage,
+                                boolean read)
+      throws IOException, NoSuchUserException, InvalidDestinationException
+  {
     if (isSyncMessage) throw new InvalidDestinationException("Transcript messages can't be relayed!");
 
     try {
       FederatedClient client = federatedClientManager.getClient(messages.getRelay());
       client.sendMessages(source.getNumber(), source.getAuthenticatedDevice().get().getId(),
-                          destinationName, messages);
+                          destinationName, messages, read);
     } catch (NoSuchPeerException e) {
       throw new NoSuchUserException(e);
     }

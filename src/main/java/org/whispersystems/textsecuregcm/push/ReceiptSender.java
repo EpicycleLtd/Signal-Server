@@ -54,6 +54,29 @@ public class ReceiptSender {
     }
   }
 
+  public void sendRead(Account source, String destination,
+                       long timestamp, Optional<Long> when, Optional<String> relay)
+          throws IOException, NoSuchUserException,
+          NotPushRegisteredException, TransientPushFailureException
+  {
+    long whenRead = when.isPresent() ? when.get() : System.currentTimeMillis();
+    String jsonMessage = Util.getJsonMessage(source.getNumber(),
+                                             destination,
+                                             timestamp,
+                                             Envelope.Type.READ_VALUE,
+                                             "read",
+                                             whenRead);
+    if (!messageQueueManager.sendMessage(jsonMessage)) {
+      throw new IOException("RabbitMQ: Sending error!");
+    }
+
+    if (relay.isPresent() && !relay.get().isEmpty()) {
+      sendRelayedRead(source, destination, timestamp, relay.get());
+    } else {
+      sendDirectRead(source, destination, timestamp);
+    }
+  }
+
   private void sendRelayedReceipt(Account source, String destination, long messageId, String relay)
       throws NoSuchUserException, IOException
   {
@@ -62,6 +85,19 @@ public class ReceiptSender {
                             .sendDeliveryReceipt(source.getNumber(),
                                                  source.getAuthenticatedDevice().get().getId(),
                                                  destination, messageId);
+    } catch (NoSuchPeerException e) {
+      throw new NoSuchUserException(e);
+    }
+  }
+
+  private void sendRelayedRead(Account source, String destination, long messageId, String relay)
+          throws NoSuchUserException, IOException
+  {
+    try {
+      federatedClientManager.getClient(relay)
+                            .sendDeliveryRead(source.getNumber(),
+                                              source.getAuthenticatedDevice().get().getId(),
+                                              destination, messageId);
     } catch (NoSuchPeerException e) {
       throw new NoSuchUserException(e);
     }
@@ -77,6 +113,27 @@ public class ReceiptSender {
                                                   .setSourceDevice((int) source.getAuthenticatedDevice().get().getId())
                                                   .setTimestamp(messageId)
                                                   .setType(Envelope.Type.RECEIPT);
+
+    if (source.getRelay().isPresent()) {
+      message.setRelay(source.getRelay().get());
+    }
+
+    for (Device destinationDevice : destinationDevices) {
+      pushSender.sendMessage(destinationAccount, destinationDevice, message.build(), true);
+    }
+  }
+
+  private void sendDirectRead(Account source, String destination, long messageId)
+          throws NotPushRegisteredException, TransientPushFailureException, NoSuchUserException
+  {
+    Account          destinationAccount = getDestinationAccount(destination);
+    Set<Device>      destinationDevices = destinationAccount.getDevices();
+    Envelope.Builder message            = Envelope.newBuilder()
+                                                  .setSource(source.getNumber())
+                                                  .setSourceDevice((int) source.getAuthenticatedDevice().get().getId())
+                                                  .setTimestamp(messageId)
+                                                  .setDeliveryTimestamp(System.currentTimeMillis())
+                                                  .setType(Envelope.Type.READ);
 
     if (source.getRelay().isPresent()) {
       message.setRelay(source.getRelay().get());
