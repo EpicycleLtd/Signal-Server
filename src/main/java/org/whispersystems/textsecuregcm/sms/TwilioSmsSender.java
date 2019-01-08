@@ -67,7 +67,7 @@ public class TwilioSmsSender {
     this.random              = new Random(System.currentTimeMillis());
   }
 
-  public void deliverSmsVerification(String destination, Optional<String> clientType, String verificationCode)
+  public void deliverSmsVerification(String destination, Optional<String> clientType, String verificationCode, Optional<String> hash)
       throws IOException, TwilioRestException
   {
     TwilioRestClient    client         = new TwilioRestClient(accountId, accountToken);
@@ -83,6 +83,8 @@ public class TwilioSmsSender {
     
     if ("ios".equals(clientType.orNull())) {
       messageParams.add(new BasicNameValuePair("Body", String.format(SmsSender.SMS_IOS_VERIFICATION_TEXT, verificationCode, verificationCode)));
+    } else if (hash.isPresent()){
+      messageParams.add(new BasicNameValuePair("Body", String.format(SmsSender.SMS_VERIFICATION_TEXT_API, verificationCode, hash.get())));
     } else {
       messageParams.add(new BasicNameValuePair("Body", String.format(SmsSender.SMS_VERIFICATION_TEXT, verificationCode)));
     }

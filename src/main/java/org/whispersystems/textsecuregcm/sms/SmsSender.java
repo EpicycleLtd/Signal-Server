@@ -29,6 +29,7 @@ public class SmsSender {
   static final String SMS_IOS_VERIFICATION_TEXT = "Your Medxnote verification code: %s\n\nOr tap: medxim://verify/%s";
   static final String SMS_VERIFICATION_TEXT     = "Your Medxnote verification code: %s";
   static final String VOX_VERIFICATION_TEXT     = "Your Medxnote verification code is: ";
+  static final String SMS_VERIFICATION_TEXT_API = "<#> Your Medxnote verification code: %s\n%s";
 
   private final Logger logger = LoggerFactory.getLogger(SmsSender.class);
 
@@ -39,7 +40,7 @@ public class SmsSender {
     this.twilioSender = twilioSender;
   }
 
-  public void deliverSmsVerification(String destination, Optional<String> clientType, String verificationCode)
+  public void deliverSmsVerification(String destination, Optional<String> clientType, String verificationCode, Optional<String> hash)
       throws IOException
   {
     // Fix up mexico numbers to 'mobile' format just for SMS delivery.
@@ -48,7 +49,7 @@ public class SmsSender {
     }
 
     try {
-      twilioSender.deliverSmsVerification(destination, clientType, verificationCode);
+      twilioSender.deliverSmsVerification(destination, clientType, verificationCode, hash);
     } catch (TwilioRestException e) {
       logger.info("Twilio SMS Failed: " + e.getErrorMessage());
     }

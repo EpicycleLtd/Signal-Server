@@ -121,7 +121,8 @@ public class AccountController {
   @Path("/{transport}/code/{number}")
   public Response createAccount(@PathParam("transport") String transport,
                                 @PathParam("number")    String number,
-                                @QueryParam("client")   Optional<String> client)
+                                @QueryParam("client")   Optional<String> client,
+                                @QueryParam("hash")     Optional<String> hash)
       throws IOException, RateLimitExceededException
   {
     if (!Util.isValidNumber(number)) {
@@ -154,7 +155,7 @@ public class AccountController {
     if (testDevices.containsKey(number)) {
       // noop
     } else if (transport.equals("sms")) {
-      smsSender.deliverSmsVerification(number, client, verificationCode.getVerificationCodeDisplay());
+      smsSender.deliverSmsVerification(number, client, verificationCode.getVerificationCodeDisplay(), hash);
     } else if (transport.equals("voice")) {
       smsSender.deliverVoxVerification(number, verificationCode.getVerificationCodeSpeech());
     }
