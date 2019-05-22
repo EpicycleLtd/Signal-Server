@@ -55,6 +55,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -68,6 +69,10 @@ import io.dropwizard.auth.Auth;
 
 @Path("/v1/messages")
 public class MessageController {
+
+  public final static String CONTROLLER_READ    = "read";
+  public final static String CONTROLLER_RECEIPT = "receipt";
+  public final static String CONTROLLER_MESSAGE = "message";
 
   private final Logger logger = LoggerFactory.getLogger(MessageController.class);
 
@@ -103,12 +108,15 @@ public class MessageController {
   @Produces(MediaType.APPLICATION_JSON)
   public SendMessageResponse sendMessage(@Auth                     Account source,
                                          @PathParam("destination") String destinationName,
+                                         @QueryParam("content")    Optional<Boolean> content,
                                          @Valid                    IncomingMessageList messages)
       throws IOException, RateLimitExceededException
   {
     rateLimiters.getMessagesLimiter().validate(source.getNumber() + "__" + destinationName);
 
     try {
+      boolean isRead = false;
+      boolean isContent = content.isPresent() && content.get();
       boolean isSyncMessage = source.getNumber().equals(destinationName);
       if (!isSyncMessage) {
         for (IncomingMessage message : messages.getMessages()) {
@@ -116,14 +124,15 @@ public class MessageController {
                                                                    destinationName,
                                                                    messages.getTimestamp(),
                                                                    message.getType(),
-                                                                   "message"))) {
+                                                                   CONTROLLER_MESSAGE))) {
             throw new WebApplicationException(Response.status(500).build());
           }
         }
       }
-      if (Util.isEmpty(messages.getRelay())) sendLocalMessage(source, destinationName, messages, isSyncMessage);
-      else                                   sendRelayMessage(source, destinationName, messages, isSyncMessage);
-
+      if (Util.isEmpty(messages.getRelay())) sendLocalMessage(source, destinationName, messages, isSyncMessage,
+                                                              isContent, isRead);
+      else                                   sendRelayMessage(source, destinationName, messages, isSyncMessage,
+                                                              isContent, isRead);
       return new SendMessageResponse(!isSyncMessage && source.getActiveDeviceCount() > 1);
     } catch (NoSuchUserException e) {
       throw new WebApplicationException(Response.status(404).build());
@@ -156,6 +165,8 @@ public class MessageController {
     rateLimiters.getMessagesLimiter().validate(source.getNumber() + "__" + destinationName);
 
     try {
+      boolean isRead = false;
+      boolean isContent = false;
       boolean isSyncMessage = source.getNumber().equals(destinationName);
       if (!isSyncMessage) {
         for (IncomingMessage message : messages.getMessages()) {
@@ -163,15 +174,16 @@ public class MessageController {
                                                                    destinationName,
                                                                    message.getTimestamp(),
                                                                    Envelope.Type.READ_VALUE,
-                                                                   "read",
+                                                                   CONTROLLER_READ,
                                                                    messages.getTimestamp()))) {
             throw new WebApplicationException(Response.status(500).build());
           }
         }
       }
-      if (Util.isEmpty(messages.getRelay())) sendLocalMessage(source, destinationName, messages, isSyncMessage, true);
-      else                                   sendRelayMessage(source, destinationName, messages, isSyncMessage, true);
-
+      if (Util.isEmpty(messages.getRelay())) sendLocalMessage(source, destinationName, messages, isSyncMessage,
+                                                              isContent, isRead);
+      else                                   sendRelayMessage(source, destinationName, messages, isSyncMessage,
+                                                              isContent, isRead);
       return new SendMessageResponse(!isSyncMessage && source.getActiveDeviceCount() > 1);
     } catch (NoSuchUserException e) {
       throw new WebApplicationException(Response.status(404).build());
@@ -229,21 +241,12 @@ public class MessageController {
     }
   }
 
-
-  private void sendLocalMessage(Account source,
-                                String destinationName,
-                                IncomingMessageList messages,
-                                boolean isSyncMessage)
-      throws NoSuchUserException, MismatchedDevicesException, StaleDevicesException
-  {
-    sendLocalMessage(source, destinationName, messages, isSyncMessage, false);
-  }
-
   private void sendLocalMessage(Account source,
                                 String destinationName,
                                 IncomingMessageList messages,
                                 boolean isSyncMessage,
-                                boolean read)
+                                boolean isContent,
+                                boolean isRead)
       throws NoSuchUserException, MismatchedDevicesException, StaleDevicesException
   {
     Account destination;
@@ -258,7 +261,8 @@ public class MessageController {
       Optional<Device> destinationDevice = destination.getDevice(incomingMessage.getDestinationDeviceId());
 
       if (destinationDevice.isPresent()) {
-        sendLocalMessage(source, destination, destinationDevice.get(), messages.getTimestamp(), incomingMessage, read);
+        sendLocalMessage(source, destination, destinationDevice.get(), messages.getTimestamp(), incomingMessage,
+                         isContent, isRead);
       }
     }
   }
@@ -267,18 +271,9 @@ public class MessageController {
                                 Account destinationAccount,
                                 Device destinationDevice,
                                 long timestamp,
-                                IncomingMessage incomingMessage)
-      throws NoSuchUserException
-  {
-    sendLocalMessage(source, destinationAccount, destinationDevice, timestamp, incomingMessage, false);
-  }
-
-  private void sendLocalMessage(Account source,
-                                Account destinationAccount,
-                                Device destinationDevice,
-                                long timestamp,
                                 IncomingMessage incomingMessage,
-                                boolean read)
+                                boolean isContent,
+                                boolean isRead)
       throws NoSuchUserException
   {
     try {
@@ -303,7 +298,8 @@ public class MessageController {
         messageBuilder.setRelay(source.getRelay().get());
       }
 
-      messageBuilder.setRead(read);
+      messageBuilder.setIsContent(isContent);
+      messageBuilder.setRead(isRead);
 
       pushSender.sendMessage(destinationAccount, destinationDevice, messageBuilder.build(), incomingMessage.isSilent());
     } catch (NotPushRegisteredException e) {
@@ -315,17 +311,9 @@ public class MessageController {
   private void sendRelayMessage(Account source,
                                 String destinationName,
                                 IncomingMessageList messages,
-                                boolean isSyncMessage)
-      throws IOException, NoSuchUserException, InvalidDestinationException
-  {
-    sendRelayMessage(source, destinationName, messages, isSyncMessage, false);
-  }
-
-  private void sendRelayMessage(Account source,
-                                String destinationName,
-                                IncomingMessageList messages,
                                 boolean isSyncMessage,
-                                boolean read)
+                                boolean isContent,
+                                boolean isRead)
       throws IOException, NoSuchUserException, InvalidDestinationException
   {
     if (isSyncMessage) throw new InvalidDestinationException("Transcript messages can't be relayed!");
@@ -333,7 +321,7 @@ public class MessageController {
     try {
       FederatedClient client = federatedClientManager.getClient(messages.getRelay());
       client.sendMessages(source.getNumber(), source.getAuthenticatedDevice().get().getId(),
-                          destinationName, messages, read);
+                          destinationName, messages, isContent, isRead);
     } catch (NoSuchPeerException e) {
       throw new NoSuchUserException(e);
     }

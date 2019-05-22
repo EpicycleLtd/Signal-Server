@@ -38,6 +38,7 @@ message Envelope {
   optional bytes  content       = 8; // Contains an encrypted Content
   optional uint64 deliveryTimestamp = 9;
   optional bool   read          = 50 [default = false];
+  optional bool   isContent     = 51;
 }
 
 message ProvisioningUuid {

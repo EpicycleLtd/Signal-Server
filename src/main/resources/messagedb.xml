@@ -78,4 +78,31 @@
         -->
     </changeSet>
 
+    <changeSet id="5" author="skal">
+        <!-- Postgres-BDR cannot execute this
+        <sql>DROP RULE bounded_message_queue ON messages;</sql>
+        <sql>CREATE RULE bounded_message_queue AS ON INSERT TO messages DO ALSO DELETE FROM messages WHERE id IN (SELECT id FROM messages WHERE destination = NEW.destination AND destination_device = NEW.destination_device ORDER BY timestamp DESC OFFSET 1000);</sql>
+        -->
+        <addColumn tableName="messages">
+            <column name="is_content" type="boolean">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="6" author="skal">
+        <addDefaultValue tableName="messages"
+                         columnName="is_content"
+                         defaultValue="false"/>
+    </changeSet>
+
+    <changeSet id="7" author="skal">
+        <sql>UPDATE messages SET is_content = false WHERE is_content is null;</sql>
+    </changeSet>
+
+    <changeSet id="8" author="skal">
+        <addNotNullConstraint tableName="messages"
+                              columnName="is_content"/>
+    </changeSet>
+
 </databaseChangeLog>

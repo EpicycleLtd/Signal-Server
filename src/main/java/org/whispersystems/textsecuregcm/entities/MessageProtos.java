@@ -126,6 +126,16 @@ public final class MessageProtos {
      * <code>optional bool read = 50 [default = false];</code>
      */
     boolean getRead();
+
+    // optional bool isContent = 51;
+    /**
+     * <code>optional bool isContent = 51;</code>
+     */
+    boolean hasIsContent();
+    /**
+     * <code>optional bool isContent = 51;</code>
+     */
+    boolean getIsContent();
   }
   /**
    * Protobuf type {@code textsecure.Envelope}
@@ -227,6 +237,11 @@ public final class MessageProtos {
             case 400: {
               bitField0_ |= 0x00000100;
               read_ = input.readBool();
+              break;
+            }
+            case 408: {
+              bitField0_ |= 0x00000200;
+              isContent_ = input.readBool();
               break;
             }
           }
@@ -601,6 +616,22 @@ public final class MessageProtos {
       return read_;
     }
 
+    // optional bool isContent = 51;
+    public static final int ISCONTENT_FIELD_NUMBER = 51;
+    private boolean isContent_;
+    /**
+     * <code>optional bool isContent = 51;</code>
+     */
+    public boolean hasIsContent() {
+      return ((bitField0_ & 0x00000200) == 0x00000200);
+    }
+    /**
+     * <code>optional bool isContent = 51;</code>
+     */
+    public boolean getIsContent() {
+      return isContent_;
+    }
+
     private void initFields() {
       type_ = org.whispersystems.textsecuregcm.entities.MessageProtos.Envelope.Type.UNKNOWN;
       source_ = "";
@@ -611,6 +642,7 @@ public final class MessageProtos {
       content_ = com.google.protobuf.ByteString.EMPTY;
       deliveryTimestamp_ = 0L;
       read_ = false;
+      isContent_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -650,6 +682,9 @@ public final class MessageProtos {
       }
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
         output.writeBool(50, read_);
+      }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        output.writeBool(51, isContent_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -695,6 +730,10 @@ public final class MessageProtos {
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(50, read_);
+      }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(51, isContent_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -830,6 +869,8 @@ public final class MessageProtos {
         bitField0_ = (bitField0_ & ~0x00000080);
         read_ = false;
         bitField0_ = (bitField0_ & ~0x00000100);
+        isContent_ = false;
+        bitField0_ = (bitField0_ & ~0x00000200);
         return this;
       }
 
@@ -894,6 +935,10 @@ public final class MessageProtos {
           to_bitField0_ |= 0x00000100;
         }
         result.read_ = read_;
+        if (((from_bitField0_ & 0x00000200) == 0x00000200)) {
+          to_bitField0_ |= 0x00000200;
+        }
+        result.isContent_ = isContent_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -940,6 +985,9 @@ public final class MessageProtos {
         }
         if (other.hasRead()) {
           setRead(other.getRead());
+        }
+        if (other.hasIsContent()) {
+          setIsContent(other.getIsContent());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1384,6 +1432,39 @@ public final class MessageProtos {
       public Builder clearRead() {
         bitField0_ = (bitField0_ & ~0x00000100);
         read_ = false;
+        onChanged();
+        return this;
+      }
+
+      // optional bool isContent = 51;
+      private boolean isContent_ ;
+      /**
+       * <code>optional bool isContent = 51;</code>
+       */
+      public boolean hasIsContent() {
+        return ((bitField0_ & 0x00000200) == 0x00000200);
+      }
+      /**
+       * <code>optional bool isContent = 51;</code>
+       */
+      public boolean getIsContent() {
+        return isContent_;
+      }
+      /**
+       * <code>optional bool isContent = 51;</code>
+       */
+      public Builder setIsContent(boolean value) {
+        bitField0_ |= 0x00000200;
+        isContent_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool isContent = 51;</code>
+       */
+      public Builder clearIsContent() {
+        bitField0_ = (bitField0_ & ~0x00000200);
+        isContent_ = false;
         onChanged();
         return this;
       }
@@ -1889,17 +1970,18 @@ public final class MessageProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\020TextSecure.proto\022\ntextsecure\"\264\002\n\010Envel" +
+      "\n\020TextSecure.proto\022\ntextsecure\"\307\002\n\010Envel" +
       "ope\022\'\n\004type\030\001 \001(\0162\031.textsecure.Envelope." +
       "Type\022\016\n\006source\030\002 \001(\t\022\024\n\014sourceDevice\030\007 \001" +
       "(\r\022\r\n\005relay\030\003 \001(\t\022\021\n\ttimestamp\030\005 \001(\004\022\025\n\r" +
       "legacyMessage\030\006 \001(\014\022\017\n\007content\030\010 \001(\014\022\031\n\021" +
       "deliveryTimestamp\030\t \001(\004\022\023\n\004read\0302 \001(\010:\005f" +
-      "alse\"_\n\004Type\022\013\n\007UNKNOWN\020\000\022\016\n\nCIPHERTEXT\020" +
-      "\001\022\020\n\014KEY_EXCHANGE\020\002\022\021\n\rPREKEY_BUNDLE\020\003\022\013" +
-      "\n\007RECEIPT\020\005\022\010\n\004READ\020\006\" \n\020ProvisioningUui" +
-      "d\022\014\n\004uuid\030\001 \001(\tB:\n)org.whispersystems.te",
-      "xtsecuregcm.entitiesB\rMessageProtos"
+      "alse\022\021\n\tisContent\0303 \001(\010\"_\n\004Type\022\013\n\007UNKNO" +
+      "WN\020\000\022\016\n\nCIPHERTEXT\020\001\022\020\n\014KEY_EXCHANGE\020\002\022\021" +
+      "\n\rPREKEY_BUNDLE\020\003\022\013\n\007RECEIPT\020\005\022\010\n\004READ\020\006" +
+      "\" \n\020ProvisioningUuid\022\014\n\004uuid\030\001 \001(\tB:\n)or",
+      "g.whispersystems.textsecuregcm.entitiesB" +
+      "\rMessageProtos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -1911,7 +1993,7 @@ public final class MessageProtos {
           internal_static_textsecure_Envelope_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_textsecure_Envelope_descriptor,
-              new java.lang.String[] { "Type", "Source", "SourceDevice", "Relay", "Timestamp", "LegacyMessage", "Content", "DeliveryTimestamp", "Read", });
+              new java.lang.String[] { "Type", "Source", "SourceDevice", "Relay", "Timestamp", "LegacyMessage", "Content", "DeliveryTimestamp", "Read", "IsContent", });
           internal_static_textsecure_ProvisioningUuid_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_textsecure_ProvisioningUuid_fieldAccessorTable = new

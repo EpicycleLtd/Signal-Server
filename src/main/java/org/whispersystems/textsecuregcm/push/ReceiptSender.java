@@ -16,6 +16,9 @@ import java.util.Set;
 
 public class ReceiptSender {
 
+  public final static String CONTROLLER_RECEIPT = "receipt";
+  public final static String CONTROLLER_READ    = "read";
+
   private final PushSender             pushSender;
   private final FederatedClientManager federatedClientManager;
   private final AccountsManager        accountManager;
@@ -38,7 +41,7 @@ public class ReceiptSender {
              NotPushRegisteredException, TransientPushFailureException
   {
     String jsonMessage = Util.getJsonMessage(source.getNumber(), destination, messageId,
-                                             Envelope.Type.RECEIPT_VALUE, "receipt");
+                                             Envelope.Type.RECEIPT_VALUE, CONTROLLER_RECEIPT);
     if (!messageQueueManager.sendMessage(jsonMessage)) {
       throw new IOException("RabbitMQ: Sending error!");
     }
@@ -64,7 +67,7 @@ public class ReceiptSender {
                                              destination,
                                              timestamp,
                                              Envelope.Type.READ_VALUE,
-                                             "read",
+                                             CONTROLLER_READ,
                                              whenRead);
     if (!messageQueueManager.sendMessage(jsonMessage)) {
       throw new IOException("RabbitMQ: Sending error!");

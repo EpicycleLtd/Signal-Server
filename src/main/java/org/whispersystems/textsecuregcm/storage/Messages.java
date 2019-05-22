@@ -38,9 +38,10 @@ public abstract class Messages {
   private static final String MESSAGE            = "message";
   private static final String CONTENT            = "content";
   private static final String READ               = "read";
+  private static final String IS_CONTENT         = "is_content";
 
-  @SqlQuery("INSERT INTO messages (" + TYPE + ", " + RELAY + ", " + TIMESTAMP + ", " + SOURCE + ", " + SOURCE_DEVICE + ", " + DESTINATION + ", " + DESTINATION_DEVICE + ", " + MESSAGE + ", " + CONTENT + ") " +
-            "VALUES (:type, :relay, :timestamp, :source, :source_device, :destination, :destination_device, :message, :content) " +
+  @SqlQuery("INSERT INTO messages (" + TYPE + ", " + RELAY + ", " + TIMESTAMP + ", " + SOURCE + ", " + SOURCE_DEVICE + ", " + DESTINATION + ", " + DESTINATION_DEVICE + ", " + MESSAGE + ", " + CONTENT + ", " + IS_CONTENT + ") " +
+            "VALUES (:type, :relay, :timestamp, :source, :source_device, :destination, :destination_device, :message, :content, :is_content) " +
             "RETURNING (SELECT COUNT(id) FROM messages WHERE " + DESTINATION + " = :destination AND " + DESTINATION_DEVICE + " = :destination_device AND " + TYPE + " != " + Envelope.Type.RECEIPT_VALUE + ")")
   abstract int store(@MessageBinder Envelope message,
                      @Bind("destination") String destination,
@@ -138,6 +139,7 @@ public abstract class Messages {
             sql.bind(SOURCE_DEVICE, message.getSourceDevice());
             sql.bind(MESSAGE, message.hasLegacyMessage() ? message.getLegacyMessage().toByteArray() : null);
             sql.bind(CONTENT, message.hasContent() ? message.getContent().toByteArray() : null);
+            sql.bind(IS_CONTENT, message.hasIsContent() && message.getIsContent());
             sql.bind(READ, message.hasRead());
           }
         };

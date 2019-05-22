@@ -37,6 +37,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.util.LinkedList;
@@ -77,12 +78,14 @@ public class FederationControllerV1 extends FederationController {
                            @PathParam("source")         String source,
                            @PathParam("sourceDeviceId") long sourceDeviceId,
                            @PathParam("destination")    String destination,
+                           @QueryParam("content")       Optional<Boolean> content,
                            @Valid                       IncomingMessageList messages)
       throws IOException
   {
     try {
       messages.setRelay(null);
-      messageController.sendMessage(new NonLimitedAccount(source, sourceDeviceId, peer.getName()), destination, messages);
+      messageController.sendMessage(new NonLimitedAccount(source, sourceDeviceId, peer.getName()), destination, content,
+                                    messages);
     } catch (RateLimitExceededException e) {
       logger.warn("Rate limiting on federated channel", e);
       throw new IOException(e);

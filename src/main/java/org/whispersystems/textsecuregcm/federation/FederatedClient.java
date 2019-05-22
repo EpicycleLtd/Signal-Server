@@ -153,22 +153,15 @@ public class FederatedClient {
   }
 
   public void sendMessages(String source, long sourceDeviceId, String destination,
-                           IncomingMessageList messages)
-      throws IOException
-  {
-    sendMessages(source, sourceDeviceId, destination, messages, false);
-  }
-
-  public void sendMessages(String source, long sourceDeviceId, String destination,
-                           IncomingMessageList messages, boolean read)
+                           IncomingMessageList messages, boolean isContent, boolean isRead)
       throws IOException
   {
     Response response = null;
 
     try {
       response = client.target(peer.getUrl())
-                       .path(String.format(read ? RELAY_MESSAGE_READ_PATH : RELAY_MESSAGE_PATH,
-                                           source, sourceDeviceId, destination))
+                       .path(String.format(isRead ? RELAY_MESSAGE_READ_PATH : RELAY_MESSAGE_PATH,
+                                           source, sourceDeviceId, destination) + "?content=" + isContent )
                        .request()
                        .put(Entity.json(messages));
 
