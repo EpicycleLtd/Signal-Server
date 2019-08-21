@@ -66,11 +66,15 @@ public abstract class Keys {
   public abstract int getCount(@Bind("number") String number, @Bind("device_id") long deviceId);
 
   @Transaction(TransactionIsolationLevel.SERIALIZABLE)
-  public void store(String number, long deviceId, List<PreKey> keys) {
+  public void store(String number, long deviceId, List<PreKey> keys, PreKey lastResortKey) {
     List<KeyRecord> records = new LinkedList<>();
 
     for (PreKey key : keys) {
       records.add(new KeyRecord(0, number, deviceId, key.getKeyId(), key.getPublicKey(), false));
+    }
+    if (lastResortKey != null) {
+      records.add(new KeyRecord(0, number, deviceId, lastResortKey.getKeyId(),
+                                lastResortKey.getPublicKey(), true));
     }
 
     removeKeys(number, deviceId);
