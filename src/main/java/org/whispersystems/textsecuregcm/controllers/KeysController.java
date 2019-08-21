@@ -104,7 +104,7 @@ public class KeysController {
       accounts.update(account);
     }
 
-    keys.store(account.getNumber(), device.getId(), preKeys.getPreKeys());
+    keys.store(account.getNumber(), device.getId(), preKeys.getPreKeys(), preKeys.getLastResortKey());
   }
 
   @Timed
@@ -138,7 +138,8 @@ public class KeysController {
 
           if (targetKeys.isPresent()) {
             for (KeyRecord keyRecord : targetKeys.get()) {
-              if (!keyRecord.isLastResort() && keyRecord.getDeviceId() == device.getId()) {
+              //if (!keyRecord.isLastResort() && keyRecord.getDeviceId() == device.getId()) {
+              if (keyRecord.getDeviceId() == device.getId()) {
                 preKey = new PreKey(keyRecord.getKeyId(), keyRecord.getPublicKey());
               }
             }

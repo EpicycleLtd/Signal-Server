@@ -41,6 +41,10 @@ public class PreKeyState {
   @NotEmpty
   private String identityKey;
 
+  @JsonProperty
+  @Valid
+  private PreKey lastResortKey;
+
   public PreKeyState() {}
 
   @VisibleForTesting
@@ -48,6 +52,7 @@ public class PreKeyState {
     this.identityKey   = identityKey;
     this.signedPreKey  = signedPreKey;
     this.preKeys       = keys;
+    this.lastResortKey = lastResortKey;
   }
 
   public List<PreKey> getPreKeys() {
@@ -62,4 +67,7 @@ public class PreKeyState {
     return identityKey;
   }
 
+  public PreKey getLastResortKey() {
+    return lastResortKey;
+  }
 }
