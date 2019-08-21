@@ -306,7 +306,7 @@ public class KeyControllerTest {
     assertThat(response.getStatus()).isEqualTo(204);
 
     ArgumentCaptor<List> listCaptor = ArgumentCaptor.forClass(List.class);
-    verify(keys).store(eq(AuthHelper.VALID_NUMBER), eq(1L), listCaptor.capture());
+    verify(keys).store(eq(AuthHelper.VALID_NUMBER), eq(1L), listCaptor.capture(), null);
 
     List<PreKey> capturedList = listCaptor.getValue();
     assertThat(capturedList.size() == 1);
